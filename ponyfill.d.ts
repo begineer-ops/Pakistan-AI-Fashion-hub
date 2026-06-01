@@ -1,5 +1,4 @@
-/// <reference lib="es2018.asynciterable" />
-
+/// <reference lib="esnext.asynciterable" />
 /**
  * A signal object that allows you to communicate with a request and abort it if required
  * via its associated `AbortController` object.
@@ -29,7 +28,6 @@ export declare interface AbortSignal {
      */
     removeEventListener(type: 'abort', listener: () => void): void;
 }
-
 /**
  * A queuing strategy that counts the number of bytes in each chunk.
  *
@@ -37,16 +35,15 @@ export declare interface AbortSignal {
  */
 export declare class ByteLengthQueuingStrategy implements QueuingStrategy<ArrayBufferView> {
     constructor(options: QueuingStrategyInit);
-    /**
-     * Returns the high water mark provided to the constructor.
-     */
-    get highWaterMark(): number;
-    /**
-     * Measures the size of `chunk` by returning the value of its `byteLength` property.
-     */
-    get size(): (chunk: ArrayBufferView) => number;
+    /*
+    * Returns the high water mark provided to the constructor.
+    */
+    readonly highWaterMark: number;
+    /*
+    * Measures the size of `chunk` by returning the value of its `byteLength` property.
+    */
+    readonly size: (chunk: ArrayBufferView) => number;
 }
-
 /**
  * A queuing strategy that counts the number of chunks.
  *
@@ -54,17 +51,16 @@ export declare class ByteLengthQueuingStrategy implements QueuingStrategy<ArrayB
  */
 export declare class CountQueuingStrategy implements QueuingStrategy<any> {
     constructor(options: QueuingStrategyInit);
-    /**
-     * Returns the high water mark provided to the constructor.
-     */
-    get highWaterMark(): number;
-    /**
-     * Measures the size of `chunk` by always returning 1.
-     * This ensures that the total queue size is a count of the number of chunks in the queue.
-     */
-    get size(): (chunk: any) => 1;
+    /*
+    * Returns the high water mark provided to the constructor.
+    */
+    readonly highWaterMark: number;
+    /*
+    * Measures the size of `chunk` by always returning 1.
+    * This ensures that the total queue size is a count of the number of chunks in the queue.
+    */
+    readonly size: (chunk: any) => 1;
 }
-
 /**
  * A queuing strategy.
  *
@@ -80,7 +76,6 @@ export declare interface QueuingStrategy<T = any> {
      */
     size?: QueuingStrategySizeCallback<T>;
 }
-
 /**
  * @public
  */
@@ -90,13 +85,11 @@ export declare interface QueuingStrategyInit {
      */
     highWaterMark: number;
 }
-
 /**
  * {@inheritDoc QueuingStrategy.size}
  * @public
  */
 export declare type QueuingStrategySizeCallback<T = any> = (chunk: T) => number;
-
 /**
  * Allows control of a {@link ReadableStream | readable byte stream}'s state and internal queue.
  *
@@ -104,15 +97,15 @@ export declare type QueuingStrategySizeCallback<T = any> = (chunk: T) => number;
  */
 export declare class ReadableByteStreamController {
     private constructor();
-    /**
-     * Returns the current BYOB pull request, or `null` if there isn't one.
-     */
-    get byobRequest(): ReadableStreamBYOBRequest | null;
-    /**
-     * Returns the desired size to fill the controlled stream's internal queue. It can be negative, if the queue is
-     * over-full. An underlying byte source ought to use this information to determine when and how to apply backpressure.
-     */
-    get desiredSize(): number | null;
+    /*
+    * Returns the current BYOB pull request, or `null` if there isn't one.
+    */
+    readonly byobRequest: ReadableStreamBYOBRequest | null;
+    /*
+    * Returns the desired size to fill the controlled stream's internal queue. It can be negative, if the queue is
+    * over-full. An underlying byte source ought to use this information to determine when and how to apply backpressure.
+    */
+    readonly desiredSize: number | null;
     /**
      * Closes the controlled readable stream. Consumers will still be able to read any previously-enqueued chunks from
      * the stream, but once those are read, the stream will become closed.
@@ -128,7 +121,6 @@ export declare class ReadableByteStreamController {
      */
     error(e?: any): void;
 }
-
 /**
  * A readable stream represents a source of data, from which you can read.
  *
@@ -140,10 +132,10 @@ export declare class ReadableStream<R = any> implements AsyncIterable<R> {
         size?: undefined;
     });
     constructor(underlyingSource?: UnderlyingSource<R>, strategy?: QueuingStrategy<R>);
-    /**
-     * Whether or not the readable stream is locked to a {@link ReadableStreamDefaultReader | reader}.
-     */
-    get locked(): boolean;
+    /*
+    * Whether or not the readable stream is locked to a {@link ReadableStreamDefaultReader | reader}.
+    */
+    readonly locked: boolean;
     /**
      * Cancels the stream, signaling a loss of interest in the stream by a consumer.
      *
@@ -202,7 +194,10 @@ export declare class ReadableStream<R = any> implements AsyncIterable<R> {
      * Note that the chunks seen in each branch will be the same object. If the chunks are not immutable,
      * this could allow interference between the two branches.
      */
-    tee(): [ReadableStream<R>, ReadableStream<R>];
+    tee(): [
+        ReadableStream<R>,
+        ReadableStream<R>
+    ];
     /**
      * Asynchronously iterates over the chunks in the stream's internal queue.
      *
@@ -227,17 +222,15 @@ export declare class ReadableStream<R = any> implements AsyncIterable<R> {
      */
     static from<R>(asyncIterable: Iterable<R> | AsyncIterable<R> | ReadableStreamLike<R>): ReadableStream<R>;
 }
-
 /**
  * An async iterator returned by {@link ReadableStream.values}.
  *
  * @public
  */
 export declare interface ReadableStreamAsyncIterator<R> extends AsyncIterableIterator<R> {
-    next(): Promise<IteratorResult<R, undefined>>;
+    next(): Promise<IteratorResult<R>>;
     return(value?: any): Promise<IteratorResult<any>>;
 }
-
 /**
  * A BYOB reader vended by a {@link ReadableStream}.
  *
@@ -245,11 +238,11 @@ export declare interface ReadableStreamAsyncIterator<R> extends AsyncIterableIte
  */
 export declare class ReadableStreamBYOBReader {
     constructor(stream: ReadableStream<Uint8Array>);
-    /**
-     * Returns a promise that will be fulfilled when the stream becomes closed, or rejected if the stream ever errors or
-     * the reader's lock is released before the stream finishes closing.
-     */
-    get closed(): Promise<undefined>;
+    /*
+    * Returns a promise that will be fulfilled when the stream becomes closed, or rejected if the stream ever errors or
+    * the reader's lock is released before the stream finishes closing.
+    */
+    readonly closed: Promise<undefined>;
     /**
      * If the reader is active, behaves the same as {@link ReadableStream.cancel | stream.cancel(reason)}.
      */
@@ -271,7 +264,6 @@ export declare class ReadableStreamBYOBReader {
      */
     releaseLock(): void;
 }
-
 /**
  * Options for {@link ReadableStreamBYOBReader.read | reading} a stream
  * with a {@link ReadableStreamBYOBReader | BYOB reader}.
@@ -281,7 +273,6 @@ export declare class ReadableStreamBYOBReader {
 export declare interface ReadableStreamBYOBReaderReadOptions {
     min?: number;
 }
-
 /**
  * A result returned by {@link ReadableStreamBYOBReader.read}.
  *
@@ -294,7 +285,6 @@ export declare type ReadableStreamBYOBReadResult<T extends ArrayBufferView> = {
     done: true;
     value: T | undefined;
 };
-
 /**
  * A pull-into request in a {@link ReadableByteStreamController}.
  *
@@ -302,10 +292,10 @@ export declare type ReadableStreamBYOBReadResult<T extends ArrayBufferView> = {
  */
 export declare class ReadableStreamBYOBRequest {
     private constructor();
-    /**
-     * Returns the view for writing in to, or `null` if the BYOB request has already been responded to.
-     */
-    get view(): ArrayBufferView | null;
+    /*
+    * Returns the view for writing in to, or `null` if the BYOB request has already been responded to.
+    */
+    readonly view: ArrayBufferView | null;
     /**
      * Indicates to the associated readable byte stream that `bytesWritten` bytes were written into
      * {@link ReadableStreamBYOBRequest.view | view}, causing the result be surfaced to the consumer.
@@ -323,7 +313,6 @@ export declare class ReadableStreamBYOBRequest {
      */
     respondWithNewView(view: ArrayBufferView): void;
 }
-
 /**
  * Allows control of a {@link ReadableStream | readable stream}'s state and internal queue.
  *
@@ -331,11 +320,11 @@ export declare class ReadableStreamBYOBRequest {
  */
 export declare class ReadableStreamDefaultController<R> {
     private constructor();
-    /**
-     * Returns the desired size to fill the controlled stream's internal queue. It can be negative, if the queue is
-     * over-full. An underlying source ought to use this information to determine when and how to apply backpressure.
-     */
-    get desiredSize(): number | null;
+    /*
+    * Returns the desired size to fill the controlled stream's internal queue. It can be negative, if the queue is
+    * over-full. An underlying source ought to use this information to determine when and how to apply backpressure.
+    */
+    readonly desiredSize: number | null;
     /**
      * Closes the controlled readable stream. Consumers will still be able to read any previously-enqueued chunks from
      * the stream, but once those are read, the stream will become closed.
@@ -350,7 +339,6 @@ export declare class ReadableStreamDefaultController<R> {
      */
     error(e?: any): void;
 }
-
 /**
  * A default reader vended by a {@link ReadableStream}.
  *
@@ -358,11 +346,11 @@ export declare class ReadableStreamDefaultController<R> {
  */
 export declare class ReadableStreamDefaultReader<R = any> {
     constructor(stream: ReadableStream<R>);
-    /**
-     * Returns a promise that will be fulfilled when the stream becomes closed,
-     * or rejected if the stream ever errors or the reader's lock is released before the stream finishes closing.
-     */
-    get closed(): Promise<undefined>;
+    /*
+    * Returns a promise that will be fulfilled when the stream becomes closed,
+    * or rejected if the stream ever errors or the reader's lock is released before the stream finishes closing.
+    */
+    readonly closed: Promise<undefined>;
     /**
      * If the reader is active, behaves the same as {@link ReadableStream.cancel | stream.cancel(reason)}.
      */
@@ -384,7 +372,6 @@ export declare class ReadableStreamDefaultReader<R = any> {
      */
     releaseLock(): void;
 }
-
 /**
  * A common interface for a `ReadableStreamDefaultReader` implementation.
  *
@@ -396,7 +383,6 @@ export declare interface ReadableStreamDefaultReaderLike<R = any> {
     read(): Promise<ReadableStreamDefaultReadResult<R>>;
     releaseLock(): void;
 }
-
 /**
  * A result returned by {@link ReadableStreamDefaultReader.read}.
  *
@@ -409,7 +395,6 @@ export declare type ReadableStreamDefaultReadResult<T> = {
     done: true;
     value?: undefined;
 };
-
 /**
  * Options for {@link ReadableStream.values | async iterating} a stream.
  *
@@ -418,7 +403,6 @@ export declare type ReadableStreamDefaultReadResult<T> = {
 export declare interface ReadableStreamIteratorOptions {
     preventCancel?: boolean;
 }
-
 /**
  * A common interface for a `ReadadableStream` implementation.
  *
@@ -428,7 +412,6 @@ export declare interface ReadableStreamLike<R = any> {
     readonly locked: boolean;
     getReader(): ReadableStreamDefaultReaderLike<R>;
 }
-
 /**
  * A pair of a {@link ReadableStream | readable stream} and {@link WritableStream | writable stream} that can be passed
  * to {@link ReadableStream.pipeThrough}.
@@ -439,7 +422,6 @@ export declare interface ReadableWritablePair<R, W> {
     readable: ReadableStream<R>;
     writable: WritableStream<W>;
 }
-
 /**
  * Options for {@link ReadableStream.pipeTo | piping} a stream.
  *
@@ -466,7 +448,6 @@ export declare interface StreamPipeOptions {
      */
     signal?: AbortSignal;
 }
-
 /**
  * A transformer for constructing a {@link TransformStream}.
  *
@@ -493,19 +474,14 @@ export declare interface Transformer<I = any, O = any> {
     readableType?: undefined;
     writableType?: undefined;
 }
-
 /** @public */
 export declare type TransformerCancelCallback = (reason: any) => void | PromiseLike<void>;
-
 /** @public */
 export declare type TransformerFlushCallback<O> = (controller: TransformStreamDefaultController<O>) => void | PromiseLike<void>;
-
 /** @public */
 export declare type TransformerStartCallback<O> = (controller: TransformStreamDefaultController<O>) => void | PromiseLike<void>;
-
 /** @public */
 export declare type TransformerTransformCallback<I, O> = (chunk: I, controller: TransformStreamDefaultController<O>) => void | PromiseLike<void>;
-
 /**
  * A transform stream consists of a pair of streams: a {@link WritableStream | writable stream},
  * known as its writable side, and a {@link ReadableStream | readable stream}, known as its readable side.
@@ -516,16 +492,15 @@ export declare type TransformerTransformCallback<I, O> = (chunk: I, controller: 
  */
 export declare class TransformStream<I = any, O = any> {
     constructor(transformer?: Transformer<I, O>, writableStrategy?: QueuingStrategy<I>, readableStrategy?: QueuingStrategy<O>);
-    /**
-     * The readable side of the transform stream.
-     */
-    get readable(): ReadableStream<O>;
-    /**
-     * The writable side of the transform stream.
-     */
-    get writable(): WritableStream<I>;
+    /*
+    * The readable side of the transform stream.
+    */
+    readonly readable: ReadableStream<O>;
+    /*
+    * The writable side of the transform stream.
+    */
+    readonly writable: WritableStream<I>;
 }
-
 /**
  * Allows control of the {@link ReadableStream} and {@link WritableStream} of the associated {@link TransformStream}.
  *
@@ -533,10 +508,10 @@ export declare class TransformStream<I = any, O = any> {
  */
 export declare class TransformStreamDefaultController<O> {
     private constructor();
-    /**
-     * Returns the desired size to fill the readable side’s internal queue. It can be negative, if the queue is over-full.
-     */
-    get desiredSize(): number | null;
+    /*
+    * Returns the desired size to fill the readable side’s internal queue. It can be negative, if the queue is over-full.
+    */
+    readonly desiredSize: number | null;
     /**
      * Enqueues the given chunk `chunk` in the readable side of the controlled transform stream.
      */
@@ -552,7 +527,6 @@ export declare class TransformStreamDefaultController<O> {
      */
     terminate(): void;
 }
-
 /**
  * An underlying byte source for constructing a {@link ReadableStream}.
  *
@@ -588,13 +562,10 @@ export declare interface UnderlyingByteSource {
      */
     autoAllocateChunkSize?: number;
 }
-
 /** @public */
 export declare type UnderlyingByteSourcePullCallback = (controller: ReadableByteStreamController) => void | PromiseLike<void>;
-
 /** @public */
 export declare type UnderlyingByteSourceStartCallback = (controller: ReadableByteStreamController) => void | PromiseLike<void>;
-
 /**
  * An underlying sink for constructing a {@link WritableStream}.
  *
@@ -638,19 +609,14 @@ export declare interface UnderlyingSink<W = any> {
     abort?: UnderlyingSinkAbortCallback;
     type?: undefined;
 }
-
 /** @public */
 export declare type UnderlyingSinkAbortCallback = (reason: any) => void | PromiseLike<void>;
-
 /** @public */
 export declare type UnderlyingSinkCloseCallback = () => void | PromiseLike<void>;
-
 /** @public */
 export declare type UnderlyingSinkStartCallback = (controller: WritableStreamDefaultController) => void | PromiseLike<void>;
-
 /** @public */
 export declare type UnderlyingSinkWriteCallback<W> = (chunk: W, controller: WritableStreamDefaultController) => void | PromiseLike<void>;
-
 /**
  * An underlying source for constructing a {@link ReadableStream}.
  *
@@ -677,16 +643,12 @@ export declare interface UnderlyingSource<R = any> {
     cancel?: UnderlyingSourceCancelCallback;
     type?: undefined;
 }
-
 /** @public */
 export declare type UnderlyingSourceCancelCallback = (reason: any) => void | PromiseLike<void>;
-
 /** @public */
 export declare type UnderlyingSourcePullCallback<R> = (controller: ReadableStreamDefaultController<R>) => void | PromiseLike<void>;
-
 /** @public */
 export declare type UnderlyingSourceStartCallback<R> = (controller: ReadableStreamDefaultController<R>) => void | PromiseLike<void>;
-
 /**
  * A writable stream represents a destination for data, into which you can write.
  *
@@ -694,10 +656,10 @@ export declare type UnderlyingSourceStartCallback<R> = (controller: ReadableStre
  */
 export declare class WritableStream<W = any> {
     constructor(underlyingSink?: UnderlyingSink<W>, strategy?: QueuingStrategy<W>);
-    /**
-     * Returns whether or not the writable stream is locked to a writer.
-     */
-    get locked(): boolean;
+    /*
+    * Returns whether or not the writable stream is locked to a writer.
+    */
+    readonly locked: boolean;
     /**
      * Aborts the stream, signaling that the producer can no longer successfully write to the stream and it is to be
      * immediately moved to an errored state, with any queued-up writes discarded. This will also execute any abort
@@ -727,7 +689,6 @@ export declare class WritableStream<W = any> {
      */
     getWriter(): WritableStreamDefaultWriter<W>;
 }
-
 /**
  * Allows control of a {@link WritableStream | writable stream}'s state and internal queue.
  *
@@ -735,18 +696,18 @@ export declare class WritableStream<W = any> {
  */
 export declare class WritableStreamDefaultController<W = any> {
     private constructor();
-    /**
-     * The reason which was passed to `WritableStream.abort(reason)` when the stream was aborted.
-     *
-     * @deprecated
-     *  This property has been removed from the specification, see https://github.com/whatwg/streams/pull/1177.
-     *  Use {@link WritableStreamDefaultController.signal}'s `reason` instead.
-     */
-    get abortReason(): any;
-    /**
-     * An `AbortSignal` that can be used to abort the pending write or close operation when the stream is aborted.
-     */
-    get signal(): AbortSignal;
+    /*
+    * The reason which was passed to `WritableStream.abort(reason)` when the stream was aborted.
+    *
+    * @deprecated
+    *  This property has been removed from the specification, see https://github.com/whatwg/streams/pull/1177.
+    *  Use {@link WritableStreamDefaultController.signal}'s `reason` instead.
+    */
+    readonly abortReason: any;
+    /*
+    * An `AbortSignal` that can be used to abort the pending write or close operation when the stream is aborted.
+    */
+    readonly signal: AbortSignal;
     /**
      * Closes the controlled writable stream, making all future interactions with it fail with the given error `e`.
      *
@@ -756,7 +717,6 @@ export declare class WritableStreamDefaultController<W = any> {
      */
     error(e?: any): void;
 }
-
 /**
  * A default writer vended by a {@link WritableStream}.
  *
@@ -764,29 +724,29 @@ export declare class WritableStreamDefaultController<W = any> {
  */
 export declare class WritableStreamDefaultWriter<W = any> {
     constructor(stream: WritableStream<W>);
-    /**
-     * Returns a promise that will be fulfilled when the stream becomes closed, or rejected if the stream ever errors or
-     * the writer’s lock is released before the stream finishes closing.
-     */
-    get closed(): Promise<undefined>;
-    /**
-     * Returns the desired size to fill the stream’s internal queue. It can be negative, if the queue is over-full.
-     * A producer can use this information to determine the right amount of data to write.
-     *
-     * It will be `null` if the stream cannot be successfully written to (due to either being errored, or having an abort
-     * queued up). It will return zero if the stream is closed. And the getter will throw an exception if invoked when
-     * the writer’s lock is released.
-     */
-    get desiredSize(): number | null;
-    /**
-     * Returns a promise that will be fulfilled when the desired size to fill the stream’s internal queue transitions
-     * from non-positive to positive, signaling that it is no longer applying backpressure. Once the desired size dips
-     * back to zero or below, the getter will return a new promise that stays pending until the next transition.
-     *
-     * If the stream becomes errored or aborted, or the writer’s lock is released, the returned promise will become
-     * rejected.
-     */
-    get ready(): Promise<undefined>;
+    /*
+    * Returns a promise that will be fulfilled when the stream becomes closed, or rejected if the stream ever errors or
+    * the writer’s lock is released before the stream finishes closing.
+    */
+    readonly closed: Promise<undefined>;
+    /*
+    * Returns the desired size to fill the stream’s internal queue. It can be negative, if the queue is over-full.
+    * A producer can use this information to determine the right amount of data to write.
+    *
+    * It will be `null` if the stream cannot be successfully written to (due to either being errored, or having an abort
+    * queued up). It will return zero if the stream is closed. And the getter will throw an exception if invoked when
+    * the writer’s lock is released.
+    */
+    readonly desiredSize: number | null;
+    /*
+    * Returns a promise that will be fulfilled when the desired size to fill the stream’s internal queue transitions
+    * from non-positive to positive, signaling that it is no longer applying backpressure. Once the desired size dips
+    * back to zero or below, the getter will return a new promise that stays pending until the next transition.
+    *
+    * If the stream becomes errored or aborted, or the writer’s lock is released, the returned promise will become
+    * rejected.
+    */
+    readonly ready: Promise<undefined>;
     /**
      * If the reader is active, behaves the same as {@link WritableStream.abort | stream.abort(reason)}.
      */
@@ -817,5 +777,4 @@ export declare class WritableStreamDefaultWriter<W = any> {
      */
     write(chunk: W): Promise<void>;
 }
-
-export { }
+export {};
