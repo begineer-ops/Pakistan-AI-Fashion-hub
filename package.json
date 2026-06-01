@@ -1,70 +1,83 @@
 {
-  "name": "ws",
-  "version": "8.21.0",
-  "description": "Simple to use, blazing fast and thoroughly tested websocket client and server for Node.js",
-  "keywords": [
-    "HyBi",
-    "Push",
-    "RFC-6455",
-    "WebSocket",
-    "WebSockets",
-    "real-time"
-  ],
-  "homepage": "https://github.com/websockets/ws",
-  "bugs": "https://github.com/websockets/ws/issues",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/websockets/ws.git"
-  },
-  "author": "Einar Otto Stangvik <einaros@gmail.com> (http://2x.io)",
-  "license": "MIT",
-  "main": "index.js",
-  "exports": {
-    ".": {
-      "browser": "./browser.js",
-      "import": "./wrapper.mjs",
-      "require": "./index.js"
-    },
-    "./package.json": "./package.json"
-  },
-  "browser": "browser.js",
-  "engines": {
-    "node": ">=10.0.0"
-  },
-  "files": [
-    "browser.js",
-    "index.js",
-    "lib/*.js",
-    "wrapper.mjs"
-  ],
-  "scripts": {
-    "test": "nyc --reporter=lcov --reporter=text mocha --throw-deprecation test/*.test.js",
-    "integration": "mocha --throw-deprecation test/*.integration.js",
-    "lint": "eslint . && prettier --check --ignore-path .gitignore \"**/*.{json,md,yaml,yml}\""
-  },
-  "peerDependencies": {
-    "bufferutil": "^4.0.1",
-    "utf-8-validate": ">=5.0.2"
-  },
-  "peerDependenciesMeta": {
-    "bufferutil": {
-      "optional": true
-    },
-    "utf-8-validate": {
-      "optional": true
+  "name": "web-streams-polyfill",
+  "version": "3.3.3",
+  "description": "Web Streams, based on the WHATWG spec reference implementation",
+  "main": "dist/polyfill",
+  "browser": "dist/polyfill.min.js",
+  "module": "dist/polyfill.mjs",
+  "types": "dist/types/polyfill.d.ts",
+  "typesVersions": {
+    ">=3.6": {
+      "dist/types/*": [
+        "dist/types/ts3.6/*"
+      ]
     }
   },
+  "scripts": {
+    "test": "npm run test:types && npm run test:unit && npm run test:wpt",
+    "test:wpt": "npm run test:wpt:node && npm run test:wpt:chromium && npm run test:wpt:firefox",
+    "test:wpt:node": "node --expose_gc ./test/wpt/node/run.js",
+    "test:wpt:chromium": "node ./test/wpt/browser/run.js --browser chromium",
+    "test:wpt:firefox": "node ./test/wpt/browser/run.js --browser firefox",
+    "test:types": "tsc -p ./test/types/tsconfig.json",
+    "test:unit": "jasmine --config=test/unit/jasmine.json",
+    "lint": "eslint \"src/**/*.ts\"",
+    "build": "npm run build:bundle && npm run build:types",
+    "build:bundle": "rollup -c",
+    "build:types": "tsc --project . --emitDeclarationOnly --declarationDir ./lib && api-extractor run",
+    "accept:types": "npm run build:types -- --local",
+    "postbuild:types": "downlevel-dts ./dist/types/ts3.6/ ./dist/types/ --to=3.5 && node ./build/downlevel-dts.js",
+    "prepare": "npm run build"
+  },
+  "files": [
+    "dist",
+    "es6",
+    "es2018",
+    "ponyfill"
+  ],
+  "engines": {
+    "node": ">= 8"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MattiasBuelens/web-streams-polyfill.git"
+  },
+  "keywords": [
+    "streams",
+    "whatwg",
+    "polyfill"
+  ],
+  "author": "Mattias Buelens <mattias@buelens.com>",
+  "contributors": [
+    "Diwank Singh <diwank.singh@gmail.com>"
+  ],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/MattiasBuelens/web-streams-polyfill/issues"
+  },
+  "homepage": "https://github.com/MattiasBuelens/web-streams-polyfill#readme",
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
-    "benchmark": "^2.1.4",
-    "bufferutil": "^4.0.1",
-    "eslint": "^10.0.1",
-    "eslint-config-prettier": "^10.0.1",
-    "eslint-plugin-prettier": "^5.0.0",
-    "globals": "^17.0.0",
-    "mocha": "^8.4.0",
-    "nyc": "^15.0.0",
-    "prettier": "^3.0.0",
-    "utf-8-validate": "^6.0.0"
+    "@microsoft/api-extractor": "^7.39.1",
+    "@rollup/plugin-inject": "^5.0.5",
+    "@rollup/plugin-replace": "^5.0.5",
+    "@rollup/plugin-strip": "^3.0.4",
+    "@rollup/plugin-terser": "^0.4.4",
+    "@rollup/plugin-typescript": "^11.1.5",
+    "@types/node": "^18.19.4",
+    "@typescript-eslint/eslint-plugin": "^6.17.0",
+    "@typescript-eslint/parser": "^6.17.0",
+    "@ungap/promise-all-settled": "^1.1.2",
+    "downlevel-dts": "^0.11.0",
+    "eslint": "^8.56.0",
+    "jasmine": "^5.1.0",
+    "micromatch": "^4.0.5",
+    "minimist": "^1.2.5",
+    "playwright": "^1.14.1",
+    "recursive-readdir": "^2.2.2",
+    "rollup": "^4.9.2",
+    "ts-morph": "^10.0.2",
+    "tslib": "^2.6.2",
+    "typescript": "^5.3.3",
+    "wpt-runner": "^5.0.0"
   }
 }
