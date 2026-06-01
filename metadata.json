@@ -1,0 +1,6 @@
+{
+  "name": "Pakistan AI Fashion Hub",
+  "description": "AI-powered Pakistani tailoring and multi-brand fashion hub covering gents and ladies wear with nationwide delivery.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
