@@ -1,30 +1,43 @@
-# Update Browserslist DB
+# unpipe
 
-<img width="120" height="120" alt="Browserslist logo by Anton Popov"
-     src="https://browsersl.ist/logo.svg" align="right">
+[![NPM Version][npm-image]][npm-url]
+[![NPM Downloads][downloads-image]][downloads-url]
+[![Node.js Version][node-image]][node-url]
+[![Build Status][travis-image]][travis-url]
+[![Test Coverage][coveralls-image]][coveralls-url]
 
-CLI tool to update `caniuse-lite` with browsers DB
-from [Browserslist](https://github.com/browserslist/browserslist/) config.
+Unpipe a stream from all destinations.
 
-Some queries like `last 2 versions` or `>1%` depend on actual data
-from `caniuse-lite`.
+## Installation
 
 ```sh
-npx update-browserslist-db@latest
-```
-Or if using `pnpm`:
-```sh
-pnpm exec update-browserslist-db latest
-```
-Or if using `yarn`:
-```sh
-yarn dlx update-browserslist-db@latest
+$ npm install unpipe
 ```
 
-<a href="https://evilmartians.com/?utm_source=update-browserslist-db">
-  <img src="https://evilmartians.com/badges/sponsored-by-evil-martians.svg"
-       alt="Sponsored by Evil Martians" width="236" height="54">
-</a>
+## API
 
-## Docs
-Read full docs **[here](https://github.com/browserslist/update-db#readme)**.
+```js
+var unpipe = require('unpipe')
+```
+
+### unpipe(stream)
+
+Unpipes all destinations from a given stream. With stream 2+, this is
+equivalent to `stream.unpipe()`. When used with streams 1 style streams
+(typically Node.js 0.8 and below), this module attempts to undo the
+actions done in `stream.pipe(dest)`.
+
+## License
+
+[MIT](LICENSE)
+
+[npm-image]: https://img.shields.io/npm/v/unpipe.svg
+[npm-url]: https://npmjs.org/package/unpipe
+[node-image]: https://img.shields.io/node/v/unpipe.svg
+[node-url]: http://nodejs.org/download/
+[travis-image]: https://img.shields.io/travis/stream-utils/unpipe.svg
+[travis-url]: https://travis-ci.org/stream-utils/unpipe
+[coveralls-image]: https://img.shields.io/coveralls/stream-utils/unpipe.svg
+[coveralls-url]: https://coveralls.io/r/stream-utils/unpipe?branch=master
+[downloads-image]: https://img.shields.io/npm/dm/unpipe.svg
+[downloads-url]: https://npmjs.org/package/unpipe
