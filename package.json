@@ -1,43 +1,40 @@
 {
-  "name": "vary",
-  "description": "Manipulate the HTTP Vary header",
-  "version": "1.1.2",
-  "author": "Douglas Christopher Wilson <doug@somethingdoug.com>",
-  "license": "MIT",
+  "name": "utils-merge",
+  "version": "1.0.1",
+  "description": "merge() utility function",
   "keywords": [
-    "http",
-    "res",
-    "vary"
+    "util"
   ],
-  "repository": "jshttp/vary",
-  "devDependencies": {
-    "beautify-benchmark": "0.2.4",
-    "benchmark": "2.1.4",
-    "eslint": "3.19.0",
-    "eslint-config-standard": "10.2.1",
-    "eslint-plugin-import": "2.7.0",
-    "eslint-plugin-markdown": "1.0.0-beta.6",
-    "eslint-plugin-node": "5.1.1",
-    "eslint-plugin-promise": "3.5.0",
-    "eslint-plugin-standard": "3.0.1",
-    "istanbul": "0.4.5",
-    "mocha": "2.5.3",
-    "supertest": "1.1.0"
+  "author": {
+    "name": "Jared Hanson",
+    "email": "jaredhanson@gmail.com",
+    "url": "http://www.jaredhanson.net/"
   },
-  "files": [
-    "HISTORY.md",
-    "LICENSE",
-    "README.md",
-    "index.js"
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/jaredhanson/utils-merge.git"
+  },
+  "bugs": {
+    "url": "http://github.com/jaredhanson/utils-merge/issues"
+  },
+  "license": "MIT",
+  "licenses": [
+    {
+      "type": "MIT",
+      "url": "http://opensource.org/licenses/MIT"
+    }
   ],
+  "main": "./index",
+  "dependencies": {},
+  "devDependencies": {
+    "make-node": "0.3.x",
+    "mocha": "1.x.x",
+    "chai": "1.x.x"
+  },
   "engines": {
-    "node": ">= 0.8"
+    "node": ">= 0.4.0"
   },
   "scripts": {
-    "bench": "node benchmark/index.js",
-    "lint": "eslint --plugin markdown --ext js,md .",
-    "test": "mocha --reporter spec --bail --check-leaks test/",
-    "test-cov": "istanbul cover node_modules/mocha/bin/_mocha -- --reporter dot --check-leaks test/",
-    "test-travis": "istanbul cover node_modules/mocha/bin/_mocha --report lcovonly -- --reporter spec --check-leaks test/"
+    "test": "node_modules/.bin/mocha --reporter spec --require test/bootstrap/node test/*.test.js"
   }
 }
