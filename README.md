@@ -1,34 +1,30 @@
-# utils-merge
+# Update Browserslist DB
 
-[![Version](https://img.shields.io/npm/v/utils-merge.svg?label=version)](https://www.npmjs.com/package/utils-merge)
-[![Build](https://img.shields.io/travis/jaredhanson/utils-merge.svg)](https://travis-ci.org/jaredhanson/utils-merge)
-[![Quality](https://img.shields.io/codeclimate/github/jaredhanson/utils-merge.svg?label=quality)](https://codeclimate.com/github/jaredhanson/utils-merge)
-[![Coverage](https://img.shields.io/coveralls/jaredhanson/utils-merge.svg)](https://coveralls.io/r/jaredhanson/utils-merge)
-[![Dependencies](https://img.shields.io/david/jaredhanson/utils-merge.svg)](https://david-dm.org/jaredhanson/utils-merge)
+<img width="120" height="120" alt="Browserslist logo by Anton Popov"
+     src="https://browsersl.ist/logo.svg" align="right">
 
+CLI tool to update `caniuse-lite` with browsers DB
+from [Browserslist](https://github.com/browserslist/browserslist/) config.
 
-Merges the properties from a source object into a destination object.
+Some queries like `last 2 versions` or `>1%` depend on actual data
+from `caniuse-lite`.
 
-## Install
-
-```bash
-$ npm install utils-merge
+```sh
+npx update-browserslist-db@latest
+```
+Or if using `pnpm`:
+```sh
+pnpm exec update-browserslist-db latest
+```
+Or if using `yarn`:
+```sh
+yarn dlx update-browserslist-db@latest
 ```
 
-## Usage
+<a href="https://evilmartians.com/?utm_source=update-browserslist-db">
+  <img src="https://evilmartians.com/badges/sponsored-by-evil-martians.svg"
+       alt="Sponsored by Evil Martians" width="236" height="54">
+</a>
 
-```javascript
-var a = { foo: 'bar' }
-  , b = { bar: 'baz' };
-
-merge(a, b);
-// => { foo: 'bar', bar: 'baz' }
-```
-
-## License
-
-[The MIT License](http://opensource.org/licenses/MIT)
-
-Copyright (c) 2013-2017 Jared Hanson <[http://jaredhanson.net/](http://jaredhanson.net/)>
-
-<a target='_blank' rel='nofollow' href='https://app.codesponsor.io/link/vK9dyjRnnWsMzzJTQ57fRJpH/jaredhanson/utils-merge'>  <img alt='Sponsor' width='888' height='68' src='https://app.codesponsor.io/embed/vK9dyjRnnWsMzzJTQ57fRJpH/jaredhanson/utils-merge.svg' /></a>
+## Docs
+Read full docs **[here](https://github.com/browserslist/update-db#readme)**.
