@@ -1,177 +1,219 @@
-declare namespace postcssValueParser {
-  interface BaseNode {
-    /**
-     * The offset, inclusive, inside the CSS value at which the node starts.
-     */
-    sourceIndex: number;
+/// <reference types="node" />
 
-    /**
-     * The offset, exclusive, inside the CSS value at which the node ends.
-     */
-    sourceEndIndex: number;
+import {RequestOptions} from 'http';
+import {FormData} from 'formdata-polyfill/esm.min.js';
+import {
+	Blob,
+	blobFrom,
+	blobFromSync,
+	File,
+	fileFrom,
+	fileFromSync
+} from 'fetch-blob/from.js';
 
-    /**
-     * The node's characteristic value
-     */
-    value: string;
-  }
+type AbortSignal = {
+	readonly aborted: boolean;
 
-  interface ClosableNode {
-    /**
-     * Whether the parsed CSS value ended before the node was properly closed
-     */
-    unclosed?: true;
-  }
+	addEventListener: (type: 'abort', listener: (this: AbortSignal) => void) => void;
+	removeEventListener: (type: 'abort', listener: (this: AbortSignal) => void) => void;
+};
 
-  interface AdjacentAwareNode {
-    /**
-     * The token at the start of the node
-     */
-    before: string;
+export type HeadersInit = Headers | Record<string, string> | Iterable<readonly [string, string]> | Iterable<Iterable<string>>;
 
-    /**
-     * The token at the end of the node
-     */
-    after: string;
-  }
+export {
+	FormData,
+	Blob,
+	blobFrom,
+	blobFromSync,
+	File,
+	fileFrom,
+	fileFromSync
+};
 
-  interface CommentNode extends BaseNode, ClosableNode {
-    type: "comment";
-  }
+/**
+ * This Fetch API interface allows you to perform various actions on HTTP request and response headers.
+ * These actions include retrieving, setting, adding to, and removing.
+ * A Headers object has an associated header list, which is initially empty and consists of zero or more name and value pairs.
+ * You can add to this using methods like append() (see Examples.)
+ * In all methods of this interface, header names are matched by case-insensitive byte sequence.
+ * */
+export class Headers {
+	constructor(init?: HeadersInit);
 
-  interface DivNode extends BaseNode, AdjacentAwareNode {
-    type: "div";
-  }
+	append(name: string, value: string): void;
+	delete(name: string): void;
+	get(name: string): string | null;
+	has(name: string): boolean;
+	set(name: string, value: string): void;
+	forEach(
+		callbackfn: (value: string, key: string, parent: Headers) => void,
+		thisArg?: any
+	): void;
 
-  interface FunctionNode extends BaseNode, ClosableNode, AdjacentAwareNode {
-    type: "function";
+	[Symbol.iterator](): IterableIterator<[string, string]>;
+	/**
+	 * Returns an iterator allowing to go through all key/value pairs contained in this object.
+	 */
+	entries(): IterableIterator<[string, string]>;
+	/**
+	 * Returns an iterator allowing to go through all keys of the key/value pairs contained in this object.
+	 */
+	keys(): IterableIterator<string>;
+	/**
+	 * Returns an iterator allowing to go through all values of the key/value pairs contained in this object.
+	 */
+	values(): IterableIterator<string>;
 
-    /**
-     * Nodes inside the function
-     */
-    nodes: Node[];
-  }
-
-  interface SpaceNode extends BaseNode {
-    type: "space";
-  }
-
-  interface StringNode extends BaseNode, ClosableNode {
-    type: "string";
-
-    /**
-     * The quote type delimiting the string
-     */
-    quote: '"' | "'";
-  }
-
-  interface UnicodeRangeNode extends BaseNode {
-    type: "unicode-range";
-  }
-
-  interface WordNode extends BaseNode {
-    type: "word";
-  }
-
-  /**
-   * Any node parsed from a CSS value
-   */
-  type Node =
-    | CommentNode
-    | DivNode
-    | FunctionNode
-    | SpaceNode
-    | StringNode
-    | UnicodeRangeNode
-    | WordNode;
-
-  interface CustomStringifierCallback {
-    /**
-     * @param node The node to stringify
-     * @returns The serialized CSS representation of the node
-     */
-    (nodes: Node): string | undefined;
-  }
-
-  interface WalkCallback {
-    /**
-     * @param node  The currently visited node
-     * @param index The index of the node in the series of parsed nodes
-     * @param nodes The series of parsed nodes
-     * @returns Returning `false` will prevent traversal of descendant nodes (only applies if `bubble` was set to `true` in the `walk()` call)
-     */
-    (node: Node, index: number, nodes: Node[]): void | boolean;
-  }
-
-  /**
-   * A CSS dimension, decomposed into its numeric and unit parts
-   */
-  interface Dimension {
-    number: string;
-    unit: string;
-  }
-
-  /**
-   * A wrapper around a parsed CSS value that allows for inspecting and walking nodes
-   */
-  interface ParsedValue {
-    /**
-     * The series of parsed nodes
-     */
-    nodes: Node[];
-
-    /**
-     * Walk all parsed nodes, applying a callback
-     *
-     * @param callback A visitor callback that will be executed for each node
-     * @param bubble   When set to `true`, walking will be done inside-out instead of outside-in
-     */
-    walk(callback: WalkCallback, bubble?: boolean): this;
-  }
-
-  interface ValueParser {
-    /**
-     * Decompose a CSS dimension into its numeric and unit part
-     *
-     * @param value The dimension to decompose
-     * @returns An object representing `number` and `unit` part of the dimension or `false` if the decomposing fails
-     */
-    unit(value: string): Dimension | false;
-
-    /**
-     * Serialize a series of nodes into a CSS value
-     *
-     * @param nodes  The nodes to stringify
-     * @param custom A custom stringifier callback
-     * @returns The generated CSS value
-     */
-    stringify(nodes: Node | Node[], custom?: CustomStringifierCallback): string;
-
-    /**
-     * Walk a series of nodes, applying a callback
-     *
-     * @param nodes    The nodes to walk
-     * @param callback A visitor callback that will be executed for each node
-     * @param bubble   When set to `true`, walking will be done inside-out instead of outside-in
-     */
-    walk(nodes: Node[], callback: WalkCallback, bubble?: boolean): void;
-
-    /**
-     * Parse a CSS value into a series of nodes to operate on
-     *
-     * @param value The value to parse
-     */
-    new (value: string): ParsedValue;
-
-    /**
-     * Parse a CSS value into a series of nodes to operate on
-     *
-     * @param value The value to parse
-     */
-    (value: string): ParsedValue;
-  }
+	/** Node-fetch extension */
+	raw(): Record<string, string[]>;
 }
 
-declare const postcssValueParser: postcssValueParser.ValueParser;
+export interface RequestInit {
+	/**
+	 * A BodyInit object or null to set request's body.
+	 */
+	body?: BodyInit | null;
+	/**
+	 * A Headers object, an object literal, or an array of two-item arrays to set request's headers.
+	 */
+	headers?: HeadersInit;
+	/**
+	 * A string to set request's method.
+	 */
+	method?: string;
+	/**
+	 * A string indicating whether request follows redirects, results in an error upon encountering a redirect, or returns the redirect (in an opaque fashion). Sets request's redirect.
+	 */
+	redirect?: RequestRedirect;
+	/**
+	 * An AbortSignal to set request's signal.
+	 */
+	signal?: AbortSignal | null;
+	/**
+	 * A string whose value is a same-origin URL, "about:client", or the empty string, to set request’s referrer.
+	 */
+	referrer?: string;
+	/**
+	 * A referrer policy to set request’s referrerPolicy.
+	 */
+	referrerPolicy?: ReferrerPolicy;
 
-export = postcssValueParser;
+	// Node-fetch extensions to the whatwg/fetch spec
+	agent?: RequestOptions['agent'] | ((parsedUrl: URL) => RequestOptions['agent']);
+	compress?: boolean;
+	counter?: number;
+	follow?: number;
+	hostname?: string;
+	port?: number;
+	protocol?: string;
+	size?: number;
+	highWaterMark?: number;
+	insecureHTTPParser?: boolean;
+}
+
+export interface ResponseInit {
+	headers?: HeadersInit;
+	status?: number;
+	statusText?: string;
+}
+
+export type BodyInit =
+	| Blob
+	| Buffer
+	| URLSearchParams
+	| FormData
+	| NodeJS.ReadableStream
+	| string;
+declare class BodyMixin {
+	constructor(body?: BodyInit, options?: {size?: number});
+
+	readonly body: NodeJS.ReadableStream | null;
+	readonly bodyUsed: boolean;
+	readonly size: number;
+
+	/** @deprecated Use `body.arrayBuffer()` instead. */
+	buffer(): Promise<Buffer>;
+	arrayBuffer(): Promise<ArrayBuffer>;
+	formData(): Promise<FormData>;
+	blob(): Promise<Blob>;
+	json(): Promise<unknown>;
+	text(): Promise<string>;
+}
+
+// `Body` must not be exported as a class since it's not exported from the JavaScript code.
+export interface Body extends Pick<BodyMixin, keyof BodyMixin> {}
+
+export type RequestRedirect = 'error' | 'follow' | 'manual';
+export type ReferrerPolicy = '' | 'no-referrer' | 'no-referrer-when-downgrade' | 'same-origin' | 'origin' | 'strict-origin' | 'origin-when-cross-origin' | 'strict-origin-when-cross-origin' | 'unsafe-url';
+export type RequestInfo = string | Request;
+export class Request extends BodyMixin {
+	constructor(input: URL | RequestInfo, init?: RequestInit);
+
+	/**
+	 * Returns a Headers object consisting of the headers associated with request. Note that headers added in the network layer by the user agent will not be accounted for in this object, e.g., the "Host" header.
+	 */
+	readonly headers: Headers;
+	/**
+	 * Returns request's HTTP method, which is "GET" by default.
+	 */
+	readonly method: string;
+	/**
+	 * Returns the redirect mode associated with request, which is a string indicating how redirects for the request will be handled during fetching. A request will follow redirects by default.
+	 */
+	readonly redirect: RequestRedirect;
+	/**
+	 * Returns the signal associated with request, which is an AbortSignal object indicating whether or not request has been aborted, and its abort event handler.
+	 */
+	readonly signal: AbortSignal;
+	/**
+	 * Returns the URL of request as a string.
+	 */
+	readonly url: string;
+	/**
+	 * A string whose value is a same-origin URL, "about:client", or the empty string, to set request’s referrer.
+	 */
+	readonly referrer: string;
+	/**
+	 * A referrer policy to set request’s referrerPolicy.
+	 */
+	readonly referrerPolicy: ReferrerPolicy;
+	clone(): Request;
+}
+
+type ResponseType = 'basic' | 'cors' | 'default' | 'error' | 'opaque' | 'opaqueredirect';
+
+export class Response extends BodyMixin {
+	constructor(body?: BodyInit | null, init?: ResponseInit);
+
+	readonly headers: Headers;
+	readonly ok: boolean;
+	readonly redirected: boolean;
+	readonly status: number;
+	readonly statusText: string;
+	readonly type: ResponseType;
+	readonly url: string;
+	clone(): Response;
+
+	static error(): Response;
+	static redirect(url: string, status?: number): Response;
+	static json(data: any, init?: ResponseInit): Response;
+}
+
+export class FetchError extends Error {
+	constructor(message: string, type: string, systemError?: Record<string, unknown>);
+
+	name: 'FetchError';
+	[Symbol.toStringTag]: 'FetchError';
+	type: string;
+	code?: string;
+	errno?: string;
+}
+
+export class AbortError extends Error {
+	type: string;
+	name: 'AbortError';
+	[Symbol.toStringTag]: 'AbortError';
+}
+
+export function isRedirect(code: number): boolean;
+export default function fetch(url: URL | RequestInfo, init?: RequestInit): Promise<Response>;
