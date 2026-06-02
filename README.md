@@ -1,50 +1,73 @@
-# math-intrinsics <sup>[![Version Badge][npm-version-svg]][package-url]</sup>
+<p align="center">
+  <a href="https://github.com/lucide-icons/lucide">
+    <img src="https://lucide.dev/package-logos/lucide-react.svg" alt="Lucide icon library for React applications." width="540">
+  </a>
+</p>
 
-[![github actions][actions-image]][actions-url]
-[![coverage][codecov-image]][codecov-url]
-[![License][license-image]][license-url]
-[![Downloads][downloads-image]][downloads-url]
+<p align="center">
+Lucide icon library for React applications.
+</p>
 
-[![npm badge][npm-badge-png]][package-url]
+<div align="center">
 
-ES Math-related intrinsics and helpers, robustly cached.
+  [![npm](https://img.shields.io/npm/v/lucide-react?color=blue)](https://www.npmjs.com/package/lucide-react)
+  ![NPM Downloads](https://img.shields.io/npm/dw/lucide-react)
+  [![GitHub](https://img.shields.io/github/license/lucide-icons/lucide)](https://lucide.dev/license)
+</div>
 
- - `abs`
- - `floor`
- - `isFinite`
- - `isInteger`
- - `isNaN`
- - `isNegativeZero`
- - `max`
- - `min`
- - `mod`
- - `pow`
- - `round`
- - `sign`
- - `constants/maxArrayLength`
- - `constants/maxSafeInteger`
- - `constants/maxValue`
+<p align="center">
+  <a href="https://lucide.dev/guide/">About</a>
+  ·
+  <a href="https://lucide.dev/icons/">Icons</a>
+  ·
+  <a href="https://lucide.dev/guide/packages/lucide-react">Documentation</a>
+  ·
+  <a href="https://lucide.dev/license">License</a>
+</p>
 
+# Lucide React
 
-## Tests
-Simply clone the repo, `npm install`, and run `npm test`
+Implementation of the lucide icon library for React applications.
 
-## Security
+## Installation
 
-Please email [@ljharb](https://github.com/ljharb) or see https://tidelift.com/security if you have a potential security vulnerability to report.
+```sh
+pnpm add lucide-react
+```
 
-[package-url]: https://npmjs.org/package/math-intrinsics
-[npm-version-svg]: https://versionbadg.es/es-shims/math-intrinsics.svg
-[deps-svg]: https://david-dm.org/es-shims/math-intrinsics.svg
-[deps-url]: https://david-dm.org/es-shims/math-intrinsics
-[dev-deps-svg]: https://david-dm.org/es-shims/math-intrinsics/dev-status.svg
-[dev-deps-url]: https://david-dm.org/es-shims/math-intrinsics#info=devDependencies
-[npm-badge-png]: https://nodei.co/npm/math-intrinsics.png?downloads=true&stars=true
-[license-image]: https://img.shields.io/npm/l/math-intrinsics.svg
-[license-url]: LICENSE
-[downloads-image]: https://img.shields.io/npm/dm/es-object.svg
-[downloads-url]: https://npm-stat.com/charts.html?package=math-intrinsics
-[codecov-image]: https://codecov.io/gh/es-shims/math-intrinsics/branch/main/graphs/badge.svg
-[codecov-url]: https://app.codecov.io/gh/es-shims/math-intrinsics/
-[actions-image]: https://img.shields.io/endpoint?url=https://github-actions-badge-u3jn4tfpocch.runkit.sh/es-shims/math-intrinsics
-[actions-url]: https://github.com/es-shims/math-intrinsics/actions
+```sh
+npm install lucide-react
+```
+
+```sh
+yarn add lucide-react
+```
+
+```sh
+bun add lucide-react
+```
+
+## Documentation
+
+For full documentation, visit [lucide.dev](https://lucide.dev/guide/packages/lucide-react)
+
+## Community
+
+Join the [Discord server](https://discord.gg/EH6nSts) to chat with the maintainers and other users.
+
+## License
+
+Lucide is licensed under the ISC license. See [LICENSE](https://lucide.dev/license).
+
+## Sponsors
+
+<a href="https://vercel.com?utm_source=lucide&utm_campaign=oss">
+  <img src="https://lucide.dev/vercel.svg" alt="Powered by Vercel" width="200" />
+</a>
+
+<a href="https://www.digitalocean.com/?refcode=b0877a2caebd&utm_campaign=Referral_Invite&utm_medium=Referral_Program&utm_source=badge"><img src="https://lucide.dev/digitalocean.svg" width="200" alt="DigitalOcean Referral Badge" /></a>
+
+### Awesome backers 🍺
+
+<a href="https://www.scipress.io?utm_source=lucide"><img src="https://lucide.dev/sponsors/scipress.svg" width="180" alt="Scipress sponsor badge" /></a>
+<a href="https://github.com/pdfme/pdfme"><img src="https://lucide.dev/sponsors/pdfme.svg" width="180" alt="pdfme sponsor badge" /></a>
