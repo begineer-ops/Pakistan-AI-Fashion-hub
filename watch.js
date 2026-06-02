@@ -7,16 +7,20 @@
 
 	Released under the MIT License.
 */
-'use strict';
-
-const rollup = require('./rollup.js');
-const require$$0$1 = require('path');
-const require$$0$2 = require('fs');
-const require$$2 = require('util');
-const require$$1 = require('stream');
-const require$$2$1 = require('os');
-const fseventsImporter = require('./fsevents-importer.js');
-const require$$0$3 = require('events');
+import { getAugmentedNamespace, fseventsImporter, getDefaultExportFromCjs, createFilter, rollupInternal } from './node-entry.js';
+import path from 'node:path';
+import process$1 from 'node:process';
+import require$$0$1 from 'path';
+import require$$0$2 from 'fs';
+import require$$2 from 'util';
+import require$$1 from 'stream';
+import require$$2$1 from 'os';
+import require$$0$3 from 'events';
+import { platform } from 'node:os';
+import './parseAst.js';
+import '../../native.js';
+import 'node:perf_hooks';
+import 'node:fs/promises';
 
 var chokidar$1 = {};
 
@@ -8093,7 +8097,7 @@ function requireNodefsHandler () {
 
 var fseventsHandler = {exports: {}};
 
-const require$$3 = /*@__PURE__*/rollup.getAugmentedNamespace(fseventsImporter.fseventsImporter);
+const require$$3 = /*@__PURE__*/getAugmentedNamespace(fseventsImporter);
 
 var hasRequiredFseventsHandler;
 
@@ -9609,7 +9613,297 @@ function requireChokidar () {
 }
 
 var chokidarExports = /*@__PURE__*/ requireChokidar();
-const chokidar = /*@__PURE__*/rollup.getDefaultExportFromCjs(chokidarExports);
+const chokidar = /*@__PURE__*/getDefaultExportFromCjs(chokidarExports);
 
-exports.chokidar = chokidar;
-//# sourceMappingURL=index.js.map
+class FileWatcher {
+    constructor(task, chokidarOptions) {
+        this.transformWatchers = new Map();
+        this.chokidarOptions = chokidarOptions;
+        this.task = task;
+        this.watcher = this.createWatcher(null);
+    }
+    close() {
+        this.watcher.close();
+        for (const watcher of this.transformWatchers.values()) {
+            watcher.close();
+        }
+    }
+    unwatch(id) {
+        this.watcher.unwatch(id);
+        const transformWatcher = this.transformWatchers.get(id);
+        if (transformWatcher) {
+            this.transformWatchers.delete(id);
+            transformWatcher.close();
+        }
+    }
+    watch(id, isTransformDependency) {
+        if (isTransformDependency) {
+            const watcher = this.transformWatchers.get(id) ?? this.createWatcher(id);
+            watcher.add(id);
+            this.transformWatchers.set(id, watcher);
+        }
+        else {
+            this.watcher.add(id);
+        }
+    }
+    createWatcher(transformWatcherId) {
+        const task = this.task;
+        const isLinux = platform() === 'linux';
+        const isFreeBSD = platform() === 'freebsd';
+        const isTransformDependency = transformWatcherId !== null;
+        const handleChange = (id, event) => {
+            const changedId = transformWatcherId || id;
+            if (isLinux || isFreeBSD) {
+                // unwatching and watching fixes an issue with chokidar where on certain systems,
+                // a file that was unlinked and immediately recreated would create a change event
+                // but then no longer any further events
+                watcher.unwatch(changedId);
+                watcher.add(changedId);
+            }
+            task.invalidate(changedId, { event, isTransformDependency });
+        };
+        const watcher = chokidar
+            .watch([], this.chokidarOptions)
+            .on('add', id => handleChange(id, 'create'))
+            .on('change', id => handleChange(id, 'update'))
+            .on('unlink', id => handleChange(id, 'delete'));
+        return watcher;
+    }
+}
+
+const eventsRewrites = {
+    create: {
+        create: 'buggy',
+        delete: null, //delete file from map
+        update: 'create'
+    },
+    delete: {
+        create: 'update',
+        delete: 'buggy',
+        update: 'buggy'
+    },
+    update: {
+        create: 'buggy',
+        delete: 'delete',
+        update: 'update'
+    }
+};
+class Watcher {
+    constructor(optionsList, emitter) {
+        this.buildDelay = 0;
+        this.buildTimeout = null;
+        this.closed = false;
+        this.invalidatedIds = new Map();
+        this.rerun = false;
+        this.running = true;
+        this.emitter = emitter;
+        emitter.close = this.close.bind(this);
+        this.tasks = optionsList.map(options => new Task(this, options));
+        for (const { watch } of optionsList) {
+            if (watch && typeof watch.buildDelay === 'number') {
+                this.buildDelay = Math.max(this.buildDelay, watch.buildDelay);
+            }
+        }
+        process$1.nextTick(() => this.run());
+    }
+    async close() {
+        if (this.closed)
+            return;
+        this.closed = true;
+        if (this.buildTimeout)
+            clearTimeout(this.buildTimeout);
+        for (const task of this.tasks) {
+            task.close();
+        }
+        await this.emitter.emit('close');
+        this.emitter.removeAllListeners();
+    }
+    invalidate(file) {
+        if (file) {
+            const previousEvent = this.invalidatedIds.get(file.id);
+            const event = previousEvent ? eventsRewrites[previousEvent][file.event] : file.event;
+            if (event === 'buggy') {
+                //TODO: throws or warn? Currently just ignore, uses new event
+                this.invalidatedIds.set(file.id, file.event);
+            }
+            else if (event === null) {
+                this.invalidatedIds.delete(file.id);
+            }
+            else {
+                this.invalidatedIds.set(file.id, event);
+            }
+        }
+        if (this.running) {
+            this.rerun = true;
+            return;
+        }
+        if (this.buildTimeout)
+            clearTimeout(this.buildTimeout);
+        this.buildTimeout = setTimeout(async () => {
+            this.buildTimeout = null;
+            try {
+                await Promise.all([...this.invalidatedIds].map(([id, event]) => this.emitter.emit('change', id, { event })));
+                this.invalidatedIds.clear();
+                await this.emitter.emit('restart');
+                this.emitter.removeListenersForCurrentRun();
+                this.run();
+            }
+            catch (error) {
+                this.invalidatedIds.clear();
+                await this.emitter.emit('event', {
+                    code: 'ERROR',
+                    error,
+                    result: null
+                });
+                await this.emitter.emit('event', {
+                    code: 'END'
+                });
+            }
+        }, this.buildDelay);
+    }
+    async run() {
+        this.running = true;
+        await this.emitter.emit('event', {
+            code: 'START'
+        });
+        for (const task of this.tasks) {
+            await task.run();
+        }
+        this.running = false;
+        await this.emitter.emit('event', {
+            code: 'END'
+        });
+        if (this.rerun) {
+            this.rerun = false;
+            this.invalidate();
+        }
+    }
+}
+class Task {
+    constructor(watcher, options) {
+        this.cache = { modules: [] };
+        this.watchFiles = [];
+        this.closed = false;
+        this.invalidated = true;
+        this.watched = new Set();
+        this.watcher = watcher;
+        this.options = options;
+        this.skipWrite = Boolean(options.watch && options.watch.skipWrite);
+        this.outputs = this.options.output;
+        this.outputFiles = this.outputs.map(output => {
+            if (output.file || output.dir)
+                return path.resolve(output.file || output.dir);
+            return undefined;
+        });
+        this.watchOptions = this.options.watch || {};
+        this.filter = createFilter(this.watchOptions.include, this.watchOptions.exclude);
+        this.fileWatcher = new FileWatcher(this, {
+            ...this.watchOptions.chokidar,
+            disableGlobbing: true,
+            ignoreInitial: true
+        });
+    }
+    close() {
+        this.closed = true;
+        this.fileWatcher.close();
+    }
+    invalidate(id, details) {
+        this.invalidated = true;
+        if (details.isTransformDependency) {
+            for (const module of this.cache.modules) {
+                if (!module.transformDependencies.includes(id))
+                    continue;
+                // effective invalidation
+                module.originalCode = null;
+            }
+        }
+        this.watcher.invalidate({ event: details.event, id });
+        this.watchOptions.onInvalidate?.(id);
+    }
+    async run() {
+        if (!this.invalidated)
+            return;
+        this.invalidated = false;
+        const options = {
+            ...this.options,
+            cache: this.cache
+        };
+        const start = Date.now();
+        await this.watcher.emitter.emit('event', {
+            code: 'BUNDLE_START',
+            input: this.options.input,
+            output: this.outputFiles
+        });
+        let result = null;
+        try {
+            result = await rollupInternal(options, this.watcher.emitter);
+            if (this.closed) {
+                return;
+            }
+            this.updateWatchedFiles(result);
+            if (!this.skipWrite) {
+                await Promise.all(this.outputs.map(output => result.write(output)));
+                if (this.closed) {
+                    return;
+                }
+                this.updateWatchedFiles(result);
+            }
+            await this.watcher.emitter.emit('event', {
+                code: 'BUNDLE_END',
+                duration: Date.now() - start,
+                input: this.options.input,
+                output: this.outputFiles,
+                result
+            });
+        }
+        catch (error) {
+            if (!this.closed) {
+                if (Array.isArray(error.watchFiles)) {
+                    for (const id of error.watchFiles) {
+                        this.watchFile(id);
+                    }
+                }
+                if (error.id) {
+                    this.cache.modules = this.cache.modules.filter(module => module.id !== error.id);
+                }
+            }
+            await this.watcher.emitter.emit('event', {
+                code: 'ERROR',
+                error,
+                result
+            });
+        }
+    }
+    updateWatchedFiles(result) {
+        const previouslyWatched = this.watched;
+        this.watched = new Set();
+        this.watchFiles = result.watchFiles;
+        this.cache = result.cache;
+        for (const id of this.watchFiles) {
+            this.watchFile(id);
+        }
+        for (const module of this.cache.modules) {
+            for (const depId of module.transformDependencies) {
+                this.watchFile(depId, true);
+            }
+        }
+        for (const id of previouslyWatched) {
+            if (!this.watched.has(id)) {
+                this.fileWatcher.unwatch(id);
+            }
+        }
+    }
+    watchFile(id, isTransformDependency = false) {
+        if (!this.filter(id))
+            return;
+        this.watched.add(id);
+        if (this.outputFiles.includes(id)) {
+            throw new Error('Cannot import the generated bundle');
+        }
+        // this is necessary to ensure that any 'renamed' files
+        // continue to be watched following an error
+        this.fileWatcher.watch(id, isTransformDependency);
+    }
+}
+
+export { Task, Watcher };
