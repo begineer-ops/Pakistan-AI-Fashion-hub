@@ -1,192 +1,334 @@
-'use strict';
+'use strict'
 
-var test = require('tape');
-var v = require('es-value-fixtures');
-var forEach = require('for-each');
-var inspect = require('object-inspect');
+// A linked list to keep track of recently-used-ness
+const Yallist = require('yallist')
 
-var abs = require('../abs');
-var floor = require('../floor');
-var isFinite = require('../isFinite');
-var isInteger = require('../isInteger');
-var isNaN = require('../isNaN');
-var isNegativeZero = require('../isNegativeZero');
-var max = require('../max');
-var min = require('../min');
-var mod = require('../mod');
-var pow = require('../pow');
-var round = require('../round');
-var sign = require('../sign');
+const MAX = Symbol('max')
+const LENGTH = Symbol('length')
+const LENGTH_CALCULATOR = Symbol('lengthCalculator')
+const ALLOW_STALE = Symbol('allowStale')
+const MAX_AGE = Symbol('maxAge')
+const DISPOSE = Symbol('dispose')
+const NO_DISPOSE_ON_SET = Symbol('noDisposeOnSet')
+const LRU_LIST = Symbol('lruList')
+const CACHE = Symbol('cache')
+const UPDATE_AGE_ON_GET = Symbol('updateAgeOnGet')
 
-var maxArrayLength = require('../constants/maxArrayLength');
-var maxSafeInteger = require('../constants/maxSafeInteger');
-var maxValue = require('../constants/maxValue');
+const naiveLength = () => 1
 
-test('abs', function (t) {
-	t.equal(abs(-1), 1, 'abs(-1) === 1');
-	t.equal(abs(+1), 1, 'abs(+1) === 1');
-	t.equal(abs(+0), +0, 'abs(+0) === +0');
-	t.equal(abs(-0), +0, 'abs(-0) === +0');
+// lruList is a yallist where the head is the youngest
+// item, and the tail is the oldest.  the list contains the Hit
+// objects as the entries.
+// Each Hit object has a reference to its Yallist.Node.  This
+// never changes.
+//
+// cache is a Map (or PseudoMap) that matches the keys to
+// the Yallist.Node object.
+class LRUCache {
+  constructor (options) {
+    if (typeof options === 'number')
+      options = { max: options }
 
-	t.end();
-});
+    if (!options)
+      options = {}
 
-test('floor', function (t) {
-	t.equal(floor(-1.1), -2, 'floor(-1.1) === -2');
-	t.equal(floor(+1.1), 1, 'floor(+1.1) === 1');
-	t.equal(floor(+0), +0, 'floor(+0) === +0');
-	t.equal(floor(-0), -0, 'floor(-0) === -0');
-	t.equal(floor(-Infinity), -Infinity, 'floor(-Infinity) === -Infinity');
-	t.equal(floor(Number(Infinity)), Number(Infinity), 'floor(+Infinity) === +Infinity');
-	t.equal(floor(NaN), NaN, 'floor(NaN) === NaN');
-	t.equal(floor(0), +0, 'floor(0) === +0');
-	t.equal(floor(-0), -0, 'floor(-0) === -0');
-	t.equal(floor(1), 1, 'floor(1) === 1');
-	t.equal(floor(-1), -1, 'floor(-1) === -1');
-	t.equal(floor(1.1), 1, 'floor(1.1) === 1');
-	t.equal(floor(-1.1), -2, 'floor(-1.1) === -2');
-	t.equal(floor(maxValue), maxValue, 'floor(maxValue) === maxValue');
-	t.equal(floor(maxSafeInteger), maxSafeInteger, 'floor(maxSafeInteger) === maxSafeInteger');
+    if (options.max && (typeof options.max !== 'number' || options.max < 0))
+      throw new TypeError('max must be a non-negative number')
+    // Kind of weird to have a default max of Infinity, but oh well.
+    const max = this[MAX] = options.max || Infinity
 
-	t.end();
-});
+    const lc = options.length || naiveLength
+    this[LENGTH_CALCULATOR] = (typeof lc !== 'function') ? naiveLength : lc
+    this[ALLOW_STALE] = options.stale || false
+    if (options.maxAge && typeof options.maxAge !== 'number')
+      throw new TypeError('maxAge must be a number')
+    this[MAX_AGE] = options.maxAge || 0
+    this[DISPOSE] = options.dispose
+    this[NO_DISPOSE_ON_SET] = options.noDisposeOnSet || false
+    this[UPDATE_AGE_ON_GET] = options.updateAgeOnGet || false
+    this.reset()
+  }
 
-test('isFinite', function (t) {
-	t.equal(isFinite(0), true, 'isFinite(+0) === true');
-	t.equal(isFinite(-0), true, 'isFinite(-0) === true');
-	t.equal(isFinite(1), true, 'isFinite(1) === true');
-	t.equal(isFinite(Infinity), false, 'isFinite(Infinity) === false');
-	t.equal(isFinite(-Infinity), false, 'isFinite(-Infinity) === false');
-	t.equal(isFinite(NaN), false, 'isFinite(NaN) === false');
+  // resize the cache when the max changes.
+  set max (mL) {
+    if (typeof mL !== 'number' || mL < 0)
+      throw new TypeError('max must be a non-negative number')
 
-	forEach(v.nonNumbers, function (nonNumber) {
-		t.equal(isFinite(nonNumber), false, 'isFinite(' + inspect(nonNumber) + ') === false');
-	});
+    this[MAX] = mL || Infinity
+    trim(this)
+  }
+  get max () {
+    return this[MAX]
+  }
 
-	t.end();
-});
+  set allowStale (allowStale) {
+    this[ALLOW_STALE] = !!allowStale
+  }
+  get allowStale () {
+    return this[ALLOW_STALE]
+  }
 
-test('isInteger', function (t) {
-	forEach([].concat(
-		// @ts-expect-error TS sucks with concat
-		v.nonNumbers,
-		v.nonIntegerNumbers
-	), function (nonInteger) {
-		t.equal(isInteger(nonInteger), false, 'isInteger(' + inspect(nonInteger) + ') === false');
-	});
+  set maxAge (mA) {
+    if (typeof mA !== 'number')
+      throw new TypeError('maxAge must be a non-negative number')
 
-	t.end();
-});
+    this[MAX_AGE] = mA
+    trim(this)
+  }
+  get maxAge () {
+    return this[MAX_AGE]
+  }
 
-test('isNaN', function (t) {
-	forEach([].concat(
-		// @ts-expect-error TS sucks with concat
-		v.nonNumbers,
-		v.infinities,
-		v.zeroes,
-		v.integerNumbers
-	), function (nonNaN) {
-		t.equal(isNaN(nonNaN), false, 'isNaN(' + inspect(nonNaN) + ') === false');
-	});
+  // resize the cache when the lengthCalculator changes.
+  set lengthCalculator (lC) {
+    if (typeof lC !== 'function')
+      lC = naiveLength
 
-	t.equal(isNaN(NaN), true, 'isNaN(NaN) === true');
+    if (lC !== this[LENGTH_CALCULATOR]) {
+      this[LENGTH_CALCULATOR] = lC
+      this[LENGTH] = 0
+      this[LRU_LIST].forEach(hit => {
+        hit.length = this[LENGTH_CALCULATOR](hit.value, hit.key)
+        this[LENGTH] += hit.length
+      })
+    }
+    trim(this)
+  }
+  get lengthCalculator () { return this[LENGTH_CALCULATOR] }
 
-	t.end();
-});
+  get length () { return this[LENGTH] }
+  get itemCount () { return this[LRU_LIST].length }
 
-test('isNegativeZero', function (t) {
-	t.equal(isNegativeZero(-0), true, 'isNegativeZero(-0) === true');
-	t.equal(isNegativeZero(+0), false, 'isNegativeZero(+0) === false');
-	t.equal(isNegativeZero(1), false, 'isNegativeZero(1) === false');
-	t.equal(isNegativeZero(-1), false, 'isNegativeZero(-1) === false');
-	t.equal(isNegativeZero(NaN), false, 'isNegativeZero(NaN) === false');
-	t.equal(isNegativeZero(Infinity), false, 'isNegativeZero(Infinity) === false');
-	t.equal(isNegativeZero(-Infinity), false, 'isNegativeZero(-Infinity) === false');
+  rforEach (fn, thisp) {
+    thisp = thisp || this
+    for (let walker = this[LRU_LIST].tail; walker !== null;) {
+      const prev = walker.prev
+      forEachStep(this, fn, walker, thisp)
+      walker = prev
+    }
+  }
 
-	forEach(v.nonNumbers, function (nonNumber) {
-		t.equal(isNegativeZero(nonNumber), false, 'isNegativeZero(' + inspect(nonNumber) + ') === false');
-	});
+  forEach (fn, thisp) {
+    thisp = thisp || this
+    for (let walker = this[LRU_LIST].head; walker !== null;) {
+      const next = walker.next
+      forEachStep(this, fn, walker, thisp)
+      walker = next
+    }
+  }
 
-	t.end();
-});
+  keys () {
+    return this[LRU_LIST].toArray().map(k => k.key)
+  }
 
-test('max', function (t) {
-	t.equal(max(1, 2), 2, 'max(1, 2) === 2');
-	t.equal(max(1, 2, 3), 3, 'max(1, 2, 3) === 3');
-	t.equal(max(1, 2, 3, 4), 4, 'max(1, 2, 3, 4) === 4');
-	t.equal(max(1, 2, 3, 4, 5), 5, 'max(1, 2, 3, 4, 5) === 5');
-	t.equal(max(1, 2, 3, 4, 5, 6), 6, 'max(1, 2, 3, 4, 5, 6) === 6');
-	t.equal(max(1, 2, 3, 4, 5, 6, 7), 7, 'max(1, 2, 3, 4, 5, 6, 7) === 7');
+  values () {
+    return this[LRU_LIST].toArray().map(k => k.value)
+  }
 
-	t.end();
-});
+  reset () {
+    if (this[DISPOSE] &&
+        this[LRU_LIST] &&
+        this[LRU_LIST].length) {
+      this[LRU_LIST].forEach(hit => this[DISPOSE](hit.key, hit.value))
+    }
 
-test('min', function (t) {
-	t.equal(min(1, 2), 1, 'min(1, 2) === 1');
-	t.equal(min(1, 2, 3), 1, 'min(1, 2, 3) === 1');
-	t.equal(min(1, 2, 3, 4), 1, 'min(1, 2, 3, 4) === 1');
-	t.equal(min(1, 2, 3, 4, 5), 1, 'min(1, 2, 3, 4, 5) === 1');
-	t.equal(min(1, 2, 3, 4, 5, 6), 1, 'min(1, 2, 3, 4, 5, 6) === 1');
+    this[CACHE] = new Map() // hash of items by key
+    this[LRU_LIST] = new Yallist() // list of items in order of use recency
+    this[LENGTH] = 0 // length of items in the list
+  }
 
-	t.end();
-});
+  dump () {
+    return this[LRU_LIST].map(hit =>
+      isStale(this, hit) ? false : {
+        k: hit.key,
+        v: hit.value,
+        e: hit.now + (hit.maxAge || 0)
+      }).toArray().filter(h => h)
+  }
 
-test('mod', function (t) {
-	t.equal(mod(1, 2), 1, 'mod(1, 2) === 1');
-	t.equal(mod(2, 2), 0, 'mod(2, 2) === 0');
-	t.equal(mod(3, 2), 1, 'mod(3, 2) === 1');
-	t.equal(mod(4, 2), 0, 'mod(4, 2) === 0');
-	t.equal(mod(5, 2), 1, 'mod(5, 2) === 1');
-	t.equal(mod(6, 2), 0, 'mod(6, 2) === 0');
-	t.equal(mod(7, 2), 1, 'mod(7, 2) === 1');
-	t.equal(mod(8, 2), 0, 'mod(8, 2) === 0');
-	t.equal(mod(9, 2), 1, 'mod(9, 2) === 1');
-	t.equal(mod(10, 2), 0, 'mod(10, 2) === 0');
-	t.equal(mod(11, 2), 1, 'mod(11, 2) === 1');
+  dumpLru () {
+    return this[LRU_LIST]
+  }
 
-	t.end();
-});
+  set (key, value, maxAge) {
+    maxAge = maxAge || this[MAX_AGE]
 
-test('pow', function (t) {
-	t.equal(pow(2, 2), 4, 'pow(2, 2) === 4');
-	t.equal(pow(2, 3), 8, 'pow(2, 3) === 8');
-	t.equal(pow(2, 4), 16, 'pow(2, 4) === 16');
-	t.equal(pow(2, 5), 32, 'pow(2, 5) === 32');
-	t.equal(pow(2, 6), 64, 'pow(2, 6) === 64');
-	t.equal(pow(2, 7), 128, 'pow(2, 7) === 128');
-	t.equal(pow(2, 8), 256, 'pow(2, 8) === 256');
-	t.equal(pow(2, 9), 512, 'pow(2, 9) === 512');
-	t.equal(pow(2, 10), 1024, 'pow(2, 10) === 1024');
+    if (maxAge && typeof maxAge !== 'number')
+      throw new TypeError('maxAge must be a number')
 
-	t.end();
-});
+    const now = maxAge ? Date.now() : 0
+    const len = this[LENGTH_CALCULATOR](value, key)
 
-test('round', function (t) {
-	t.equal(round(1.1), 1, 'round(1.1) === 1');
-	t.equal(round(1.5), 2, 'round(1.5) === 2');
-	t.equal(round(1.9), 2, 'round(1.9) === 2');
+    if (this[CACHE].has(key)) {
+      if (len > this[MAX]) {
+        del(this, this[CACHE].get(key))
+        return false
+      }
 
-	t.end();
-});
+      const node = this[CACHE].get(key)
+      const item = node.value
 
-test('sign', function (t) {
-	t.equal(sign(-1), -1, 'sign(-1) === -1');
-	t.equal(sign(+1), +1, 'sign(+1) === +1');
-	t.equal(sign(+0), +0, 'sign(+0) === +0');
-	t.equal(sign(-0), -0, 'sign(-0) === -0');
-	t.equal(sign(NaN), NaN, 'sign(NaN) === NaN');
-	t.equal(sign(Infinity), +1, 'sign(Infinity) === +1');
-	t.equal(sign(-Infinity), -1, 'sign(-Infinity) === -1');
-	t.equal(sign(maxValue), +1, 'sign(maxValue) === +1');
-	t.equal(sign(maxSafeInteger), +1, 'sign(maxSafeInteger) === +1');
+      // dispose of the old one before overwriting
+      // split out into 2 ifs for better coverage tracking
+      if (this[DISPOSE]) {
+        if (!this[NO_DISPOSE_ON_SET])
+          this[DISPOSE](key, item.value)
+      }
 
-	t.end();
-});
+      item.now = now
+      item.maxAge = maxAge
+      item.value = value
+      this[LENGTH] += len - item.length
+      item.length = len
+      this.get(key)
+      trim(this)
+      return true
+    }
 
-test('constants', function (t) {
-	t.equal(typeof maxArrayLength, 'number', 'typeof maxArrayLength === "number"');
-	t.equal(typeof maxSafeInteger, 'number', 'typeof maxSafeInteger === "number"');
-	t.equal(typeof maxValue, 'number', 'typeof maxValue === "number"');
+    const hit = new Entry(key, value, len, now, maxAge)
 
-	t.end();
-});
+    // oversized objects fall out of cache automatically.
+    if (hit.length > this[MAX]) {
+      if (this[DISPOSE])
+        this[DISPOSE](key, value)
+
+      return false
+    }
+
+    this[LENGTH] += hit.length
+    this[LRU_LIST].unshift(hit)
+    this[CACHE].set(key, this[LRU_LIST].head)
+    trim(this)
+    return true
+  }
+
+  has (key) {
+    if (!this[CACHE].has(key)) return false
+    const hit = this[CACHE].get(key).value
+    return !isStale(this, hit)
+  }
+
+  get (key) {
+    return get(this, key, true)
+  }
+
+  peek (key) {
+    return get(this, key, false)
+  }
+
+  pop () {
+    const node = this[LRU_LIST].tail
+    if (!node)
+      return null
+
+    del(this, node)
+    return node.value
+  }
+
+  del (key) {
+    del(this, this[CACHE].get(key))
+  }
+
+  load (arr) {
+    // reset the cache
+    this.reset()
+
+    const now = Date.now()
+    // A previous serialized cache has the most recent items first
+    for (let l = arr.length - 1; l >= 0; l--) {
+      const hit = arr[l]
+      const expiresAt = hit.e || 0
+      if (expiresAt === 0)
+        // the item was created without expiration in a non aged cache
+        this.set(hit.k, hit.v)
+      else {
+        const maxAge = expiresAt - now
+        // dont add already expired items
+        if (maxAge > 0) {
+          this.set(hit.k, hit.v, maxAge)
+        }
+      }
+    }
+  }
+
+  prune () {
+    this[CACHE].forEach((value, key) => get(this, key, false))
+  }
+}
+
+const get = (self, key, doUse) => {
+  const node = self[CACHE].get(key)
+  if (node) {
+    const hit = node.value
+    if (isStale(self, hit)) {
+      del(self, node)
+      if (!self[ALLOW_STALE])
+        return undefined
+    } else {
+      if (doUse) {
+        if (self[UPDATE_AGE_ON_GET])
+          node.value.now = Date.now()
+        self[LRU_LIST].unshiftNode(node)
+      }
+    }
+    return hit.value
+  }
+}
+
+const isStale = (self, hit) => {
+  if (!hit || (!hit.maxAge && !self[MAX_AGE]))
+    return false
+
+  const diff = Date.now() - hit.now
+  return hit.maxAge ? diff > hit.maxAge
+    : self[MAX_AGE] && (diff > self[MAX_AGE])
+}
+
+const trim = self => {
+  if (self[LENGTH] > self[MAX]) {
+    for (let walker = self[LRU_LIST].tail;
+      self[LENGTH] > self[MAX] && walker !== null;) {
+      // We know that we're about to delete this one, and also
+      // what the next least recently used key will be, so just
+      // go ahead and set it now.
+      const prev = walker.prev
+      del(self, walker)
+      walker = prev
+    }
+  }
+}
+
+const del = (self, node) => {
+  if (node) {
+    const hit = node.value
+    if (self[DISPOSE])
+      self[DISPOSE](hit.key, hit.value)
+
+    self[LENGTH] -= hit.length
+    self[CACHE].delete(hit.key)
+    self[LRU_LIST].removeNode(node)
+  }
+}
+
+class Entry {
+  constructor (key, value, length, now, maxAge) {
+    this.key = key
+    this.value = value
+    this.length = length
+    this.now = now
+    this.maxAge = maxAge || 0
+  }
+}
+
+const forEachStep = (self, fn, node, thisp) => {
+  let hit = node.value
+  if (isStale(self, hit)) {
+    del(self, node)
+    if (!self[ALLOW_STALE])
+      hit = undefined
+  }
+  if (hit)
+    fn.call(thisp, hit.value, hit.key, self)
+}
+
+module.exports = LRUCache

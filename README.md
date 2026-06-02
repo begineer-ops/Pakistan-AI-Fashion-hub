@@ -1,73 +1,166 @@
-<p align="center">
-  <a href="https://github.com/lucide-icons/lucide">
-    <img src="https://lucide.dev/package-logos/lucide-react.svg" alt="Lucide icon library for React applications." width="540">
-  </a>
-</p>
+# lru cache
 
-<p align="center">
-Lucide icon library for React applications.
-</p>
+A cache object that deletes the least-recently-used items.
 
-<div align="center">
+[![Build Status](https://travis-ci.org/isaacs/node-lru-cache.svg?branch=master)](https://travis-ci.org/isaacs/node-lru-cache) [![Coverage Status](https://coveralls.io/repos/isaacs/node-lru-cache/badge.svg?service=github)](https://coveralls.io/github/isaacs/node-lru-cache)
 
-  [![npm](https://img.shields.io/npm/v/lucide-react?color=blue)](https://www.npmjs.com/package/lucide-react)
-  ![NPM Downloads](https://img.shields.io/npm/dw/lucide-react)
-  [![GitHub](https://img.shields.io/github/license/lucide-icons/lucide)](https://lucide.dev/license)
-</div>
+## Installation:
 
-<p align="center">
-  <a href="https://lucide.dev/guide/">About</a>
-  ·
-  <a href="https://lucide.dev/icons/">Icons</a>
-  ·
-  <a href="https://lucide.dev/guide/packages/lucide-react">Documentation</a>
-  ·
-  <a href="https://lucide.dev/license">License</a>
-</p>
-
-# Lucide React
-
-Implementation of the lucide icon library for React applications.
-
-## Installation
-
-```sh
-pnpm add lucide-react
+```javascript
+npm install lru-cache --save
 ```
 
-```sh
-npm install lucide-react
+## Usage:
+
+```javascript
+var LRU = require("lru-cache")
+  , options = { max: 500
+              , length: function (n, key) { return n * 2 + key.length }
+              , dispose: function (key, n) { n.close() }
+              , maxAge: 1000 * 60 * 60 }
+  , cache = new LRU(options)
+  , otherCache = new LRU(50) // sets just the max size
+
+cache.set("key", "value")
+cache.get("key") // "value"
+
+// non-string keys ARE fully supported
+// but note that it must be THE SAME object, not
+// just a JSON-equivalent object.
+var someObject = { a: 1 }
+cache.set(someObject, 'a value')
+// Object keys are not toString()-ed
+cache.set('[object Object]', 'a different value')
+assert.equal(cache.get(someObject), 'a value')
+// A similar object with same keys/values won't work,
+// because it's a different object identity
+assert.equal(cache.get({ a: 1 }), undefined)
+
+cache.reset()    // empty the cache
 ```
 
-```sh
-yarn add lucide-react
-```
+If you put more stuff in it, then items will fall out.
 
-```sh
-bun add lucide-react
-```
+If you try to put an oversized thing in it, then it'll fall out right
+away.
 
-## Documentation
+## Options
 
-For full documentation, visit [lucide.dev](https://lucide.dev/guide/packages/lucide-react)
+* `max` The maximum size of the cache, checked by applying the length
+  function to all values in the cache.  Not setting this is kind of
+  silly, since that's the whole purpose of this lib, but it defaults
+  to `Infinity`.  Setting it to a non-number or negative number will
+  throw a `TypeError`.  Setting it to 0 makes it be `Infinity`.
+* `maxAge` Maximum age in ms.  Items are not pro-actively pruned out
+  as they age, but if you try to get an item that is too old, it'll
+  drop it and return undefined instead of giving it to you.
+  Setting this to a negative value will make everything seem old!
+  Setting it to a non-number will throw a `TypeError`.
+* `length` Function that is used to calculate the length of stored
+  items.  If you're storing strings or buffers, then you probably want
+  to do something like `function(n, key){return n.length}`.  The default is
+  `function(){return 1}`, which is fine if you want to store `max`
+  like-sized things.  The item is passed as the first argument, and
+  the key is passed as the second argumnet.
+* `dispose` Function that is called on items when they are dropped
+  from the cache.  This can be handy if you want to close file
+  descriptors or do other cleanup tasks when items are no longer
+  accessible.  Called with `key, value`.  It's called *before*
+  actually removing the item from the internal cache, so if you want
+  to immediately put it back in, you'll have to do that in a
+  `nextTick` or `setTimeout` callback or it won't do anything.
+* `stale` By default, if you set a `maxAge`, it'll only actually pull
+  stale items out of the cache when you `get(key)`.  (That is, it's
+  not pre-emptively doing a `setTimeout` or anything.)  If you set
+  `stale:true`, it'll return the stale value before deleting it.  If
+  you don't set this, then it'll return `undefined` when you try to
+  get a stale entry, as if it had already been deleted.
+* `noDisposeOnSet` By default, if you set a `dispose()` method, then
+  it'll be called whenever a `set()` operation overwrites an existing
+  key.  If you set this option, `dispose()` will only be called when a
+  key falls out of the cache, not when it is overwritten.
+* `updateAgeOnGet` When using time-expiring entries with `maxAge`,
+  setting this to `true` will make each item's effective time update
+  to the current time whenever it is retrieved from cache, causing it
+  to not expire.  (It can still fall out of cache based on recency of
+  use, of course.)
 
-## Community
+## API
 
-Join the [Discord server](https://discord.gg/EH6nSts) to chat with the maintainers and other users.
+* `set(key, value, maxAge)`
+* `get(key) => value`
 
-## License
+    Both of these will update the "recently used"-ness of the key.
+    They do what you think. `maxAge` is optional and overrides the
+    cache `maxAge` option if provided.
 
-Lucide is licensed under the ISC license. See [LICENSE](https://lucide.dev/license).
+    If the key is not found, `get()` will return `undefined`.
 
-## Sponsors
+    The key and val can be any value.
 
-<a href="https://vercel.com?utm_source=lucide&utm_campaign=oss">
-  <img src="https://lucide.dev/vercel.svg" alt="Powered by Vercel" width="200" />
-</a>
+* `peek(key)`
 
-<a href="https://www.digitalocean.com/?refcode=b0877a2caebd&utm_campaign=Referral_Invite&utm_medium=Referral_Program&utm_source=badge"><img src="https://lucide.dev/digitalocean.svg" width="200" alt="DigitalOcean Referral Badge" /></a>
+    Returns the key value (or `undefined` if not found) without
+    updating the "recently used"-ness of the key.
 
-### Awesome backers 🍺
+    (If you find yourself using this a lot, you *might* be using the
+    wrong sort of data structure, but there are some use cases where
+    it's handy.)
 
-<a href="https://www.scipress.io?utm_source=lucide"><img src="https://lucide.dev/sponsors/scipress.svg" width="180" alt="Scipress sponsor badge" /></a>
-<a href="https://github.com/pdfme/pdfme"><img src="https://lucide.dev/sponsors/pdfme.svg" width="180" alt="pdfme sponsor badge" /></a>
+* `del(key)`
+
+    Deletes a key out of the cache.
+
+* `reset()`
+
+    Clear the cache entirely, throwing away all values.
+
+* `has(key)`
+
+    Check if a key is in the cache, without updating the recent-ness
+    or deleting it for being stale.
+
+* `forEach(function(value,key,cache), [thisp])`
+
+    Just like `Array.prototype.forEach`.  Iterates over all the keys
+    in the cache, in order of recent-ness.  (Ie, more recently used
+    items are iterated over first.)
+
+* `rforEach(function(value,key,cache), [thisp])`
+
+    The same as `cache.forEach(...)` but items are iterated over in
+    reverse order.  (ie, less recently used items are iterated over
+    first.)
+
+* `keys()`
+
+    Return an array of the keys in the cache.
+
+* `values()`
+
+    Return an array of the values in the cache.
+
+* `length`
+
+    Return total length of objects in cache taking into account
+    `length` options function.
+
+* `itemCount`
+
+    Return total quantity of objects currently in cache. Note, that
+    `stale` (see options) items are returned as part of this item
+    count.
+
+* `dump()`
+
+    Return an array of the cache entries ready for serialization and usage
+    with 'destinationCache.load(arr)`.
+
+* `load(cacheEntriesArray)`
+
+    Loads another cache entries array, obtained with `sourceCache.dump()`,
+    into the cache. The destination cache is reset before loading new entries
+
+* `prune()`
+
+    Manually iterates over the entire cache proactively pruning old entries
