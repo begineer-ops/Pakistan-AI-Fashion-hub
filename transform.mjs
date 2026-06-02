@@ -1,53 +1,48 @@
-function buildProjectionTransform(delta, treeScale, latestTransform) {
+import { transformPropOrder } from '../../render/utils/keys-transform.mjs';
+
+const translateAlias = {
+    x: "translateX",
+    y: "translateY",
+    z: "translateZ",
+    transformPerspective: "perspective",
+};
+function buildTransform(state) {
     let transform = "";
+    let transformIsDefault = true;
     /**
-     * The translations we use to calculate are always relative to the viewport coordinate space.
-     * But when we apply scales, we also scale the coordinate space of an element and its children.
-     * For instance if we have a treeScale (the culmination of all parent scales) of 0.5 and we need
-     * to move an element 100 pixels, we actually need to move it 200 in within that scaled space.
+     * Loop over all possible transforms in order, adding the ones that
+     * are present to the transform string.
      */
-    const xTranslate = delta.x.translate / treeScale.x;
-    const yTranslate = delta.y.translate / treeScale.y;
-    const zTranslate = latestTransform?.z || 0;
-    if (xTranslate || yTranslate || zTranslate) {
-        transform = `translate3d(${xTranslate}px, ${yTranslate}px, ${zTranslate}px) `;
+    for (let i = 0; i < transformPropOrder.length; i++) {
+        const key = transformPropOrder[i];
+        const value = state.latest[key];
+        if (value === undefined)
+            continue;
+        let valueIsDefault = true;
+        if (typeof value === "number") {
+            valueIsDefault = value === (key.startsWith("scale") ? 1 : 0);
+        }
+        else {
+            const parsed = parseFloat(value);
+            valueIsDefault = key.startsWith("scale") ? parsed === 1 : parsed === 0;
+        }
+        if (!valueIsDefault) {
+            transformIsDefault = false;
+            const transformName = translateAlias[key] || key;
+            transform += `${transformName}(${value}) `;
+        }
     }
-    /**
-     * Apply scale correction for the tree transform.
-     * This will apply scale to the screen-orientated axes.
-     */
-    if (treeScale.x !== 1 || treeScale.y !== 1) {
-        transform += `scale(${1 / treeScale.x}, ${1 / treeScale.y}) `;
+    // See build-transform.ts: additive `rotate()` so user `rotate` isn't
+    // clobbered. Not a `transformPropOrder` slot.
+    const pathRotation = state.latest.pathRotation;
+    if (pathRotation) {
+        transformIsDefault = false;
+        transform += `rotate(${typeof pathRotation === "number"
+            ? `${pathRotation}deg`
+            : pathRotation}) `;
     }
-    if (latestTransform) {
-        const { transformPerspective, rotate, pathRotation, rotateX, rotateY, skewX, skewY, } = latestTransform;
-        if (transformPerspective)
-            transform = `perspective(${transformPerspective}px) ${transform}`;
-        if (rotate)
-            transform += `rotate(${rotate}deg) `;
-        // Additive `rotate()` so user `rotate` isn't clobbered.
-        if (pathRotation)
-            transform += `rotate(${pathRotation}deg) `;
-        if (rotateX)
-            transform += `rotateX(${rotateX}deg) `;
-        if (rotateY)
-            transform += `rotateY(${rotateY}deg) `;
-        if (skewX)
-            transform += `skewX(${skewX}deg) `;
-        if (skewY)
-            transform += `skewY(${skewY}deg) `;
-    }
-    /**
-     * Apply scale to match the size of the element to the size we want it.
-     * This will apply scale to the element-orientated axes.
-     */
-    const elementScaleX = delta.x.scale * treeScale.x;
-    const elementScaleY = delta.y.scale * treeScale.y;
-    if (elementScaleX !== 1 || elementScaleY !== 1) {
-        transform += `scale(${elementScaleX}, ${elementScaleY})`;
-    }
-    return transform || "none";
+    return transformIsDefault ? "none" : transform.trim();
 }
 
-export { buildProjectionTransform };
+export { buildTransform };
 //# sourceMappingURL=transform.mjs.map
