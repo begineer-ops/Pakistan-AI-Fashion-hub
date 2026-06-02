@@ -1,7 +1,18 @@
-import { noop } from 'motion-utils';
-import { createRenderBatcher } from './batcher.mjs';
+import { time } from '../../frameloop/sync-time.mjs';
+import { frameData, cancelFrame, frame } from '../../frameloop/frame.mjs';
 
-const { schedule: frame, cancel: cancelFrame, state: frameData, steps: frameSteps, } = /* @__PURE__ */ createRenderBatcher(typeof requestAnimationFrame !== "undefined" ? requestAnimationFrame : noop, true);
+const frameloopDriver = (update) => {
+    const passTimestamp = ({ timestamp }) => update(timestamp);
+    return {
+        start: (keepAlive = true) => frame.update(passTimestamp, keepAlive),
+        stop: () => cancelFrame(passTimestamp),
+        /**
+         * If we're processing this frame we can use the
+         * framelocked timestamp to keep things in sync.
+         */
+        now: () => (frameData.isProcessing ? frameData.timestamp : time.now()),
+    };
+};
 
-export { cancelFrame, frame, frameData, frameSteps };
+export { frameloopDriver };
 //# sourceMappingURL=frame.mjs.map
