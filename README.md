@@ -1,170 +1,164 @@
-# type-is
+# tslib
 
-[![NPM Version][npm-version-image]][npm-url]
-[![NPM Downloads][npm-downloads-image]][npm-url]
-[![Node.js Version][node-version-image]][node-version-url]
-[![Build Status][travis-image]][travis-url]
-[![Test Coverage][coveralls-image]][coveralls-url]
+This is a runtime library for [TypeScript](https://www.typescriptlang.org/) that contains all of the TypeScript helper functions.
 
-Infer the content-type of a request.
+This library is primarily used by the `--importHelpers` flag in TypeScript.
+When using `--importHelpers`, a module that uses helper functions like `__extends` and `__assign` in the following emitted file:
 
-### Install
+```ts
+var __assign = (this && this.__assign) || Object.assign || function(t) {
+    for (var s, i = 1, n = arguments.length; i < n; i++) {
+        s = arguments[i];
+        for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+            t[p] = s[p];
+    }
+    return t;
+};
+exports.x = {};
+exports.y = __assign({}, exports.x);
 
-This is a [Node.js](https://nodejs.org/en/) module available through the
-[npm registry](https://www.npmjs.com/). Installation is done using the
-[`npm install` command](https://docs.npmjs.com/getting-started/installing-npm-packages-locally):
+```
+
+will instead be emitted as something like the following:
+
+```ts
+var tslib_1 = require("tslib");
+exports.x = {};
+exports.y = tslib_1.__assign({}, exports.x);
+```
+
+Because this can avoid duplicate declarations of things like `__extends`, `__assign`, etc., this means delivering users smaller files on average, as well as less runtime overhead.
+For optimized bundles with TypeScript, you should absolutely consider using `tslib` and `--importHelpers`.
+
+# Installing
+
+For the latest stable version, run:
+
+## npm
 
 ```sh
-$ npm install type-is
+# TypeScript 3.9.2 or later
+npm install tslib
+
+# TypeScript 3.8.4 or earlier
+npm install tslib@^1
+
+# TypeScript 2.3.2 or earlier
+npm install tslib@1.6.1
 ```
 
-## API
+## yarn
 
-```js
-var http = require('http')
-var typeis = require('type-is')
+```sh
+# TypeScript 3.9.2 or later
+yarn add tslib
 
-http.createServer(function (req, res) {
-  var istext = typeis(req, ['text/*'])
-  res.end('you ' + (istext ? 'sent' : 'did not send') + ' me text')
-})
+# TypeScript 3.8.4 or earlier
+yarn add tslib@^1
+
+# TypeScript 2.3.2 or earlier
+yarn add tslib@1.6.1
 ```
 
-### typeis(request, types)
+## bower
 
-Checks if the `request` is one of the `types`. If the request has no body,
-even if there is a `Content-Type` header, then `null` is returned. If the
-`Content-Type` header is invalid or does not matches any of the `types`, then
-`false` is returned. Otherwise, a string of the type that matched is returned.
+```sh
+# TypeScript 3.9.2 or later
+bower install tslib
 
-The `request` argument is expected to be a Node.js HTTP request. The `types`
-argument is an array of type strings.
+# TypeScript 3.8.4 or earlier
+bower install tslib@^1
 
-Each type in the `types` array can be one of the following:
-
-- A file extension name such as `json`. This name will be returned if matched.
-- A mime type such as `application/json`.
-- A mime type with a wildcard such as `*/*` or `*/json` or `application/*`.
-  The full mime type will be returned if matched.
-- A suffix such as `+json`. This can be combined with a wildcard such as
-  `*/vnd+json` or `application/*+json`. The full mime type will be returned
-  if matched.
-
-Some examples to illustrate the inputs and returned value:
-
-<!-- eslint-disable no-undef -->
-
-```js
-// req.headers.content-type = 'application/json'
-
-typeis(req, ['json']) // => 'json'
-typeis(req, ['html', 'json']) // => 'json'
-typeis(req, ['application/*']) // => 'application/json'
-typeis(req, ['application/json']) // => 'application/json'
-
-typeis(req, ['html']) // => false
+# TypeScript 2.3.2 or earlier
+bower install tslib@1.6.1
 ```
 
-### typeis.hasBody(request)
+## JSPM
 
-Returns a Boolean if the given `request` has a body, regardless of the
-`Content-Type` header.
+```sh
+# TypeScript 3.9.2 or later
+jspm install tslib
 
-Having a body has no relation to how large the body is (it may be 0 bytes).
-This is similar to how file existence works. If a body does exist, then this
-indicates that there is data to read from the Node.js request stream.
+# TypeScript 3.8.4 or earlier
+jspm install tslib@^1
 
-<!-- eslint-disable no-undef -->
+# TypeScript 2.3.2 or earlier
+jspm install tslib@1.6.1
+```
 
-```js
-if (typeis.hasBody(req)) {
-  // read the body, since there is one
+# Usage
 
-  req.on('data', function (chunk) {
-    // ...
-  })
+Set the `importHelpers` compiler option on the command line:
+
+```
+tsc --importHelpers file.ts
+```
+
+or in your tsconfig.json:
+
+```json
+{
+    "compilerOptions": {
+        "importHelpers": true
+    }
 }
 ```
 
-### typeis.is(mediaType, types)
+#### For bower and JSPM users
 
-Checks if the `mediaType` is one of the `types`. If the `mediaType` is invalid
-or does not matches any of the `types`, then `false` is returned. Otherwise, a
-string of the type that matched is returned.
+You will need to add a `paths` mapping for `tslib`, e.g. For Bower users:
 
-The `mediaType` argument is expected to be a
-[media type](https://tools.ietf.org/html/rfc6838) string. The `types` argument
-is an array of type strings.
-
-Each type in the `types` array can be one of the following:
-
-- A file extension name such as `json`. This name will be returned if matched.
-- A mime type such as `application/json`.
-- A mime type with a wildcard such as `*/*` or `*/json` or `application/*`.
-  The full mime type will be returned if matched.
-- A suffix such as `+json`. This can be combined with a wildcard such as
-  `*/vnd+json` or `application/*+json`. The full mime type will be returned
-  if matched.
-
-Some examples to illustrate the inputs and returned value:
-
-<!-- eslint-disable no-undef -->
-
-```js
-var mediaType = 'application/json'
-
-typeis.is(mediaType, ['json']) // => 'json'
-typeis.is(mediaType, ['html', 'json']) // => 'json'
-typeis.is(mediaType, ['application/*']) // => 'application/json'
-typeis.is(mediaType, ['application/json']) // => 'application/json'
-
-typeis.is(mediaType, ['html']) // => false
+```json
+{
+    "compilerOptions": {
+        "module": "amd",
+        "importHelpers": true,
+        "baseUrl": "./",
+        "paths": {
+            "tslib" : ["bower_components/tslib/tslib.d.ts"]
+        }
+    }
+}
 ```
 
-## Examples
+For JSPM users:
 
-### Example body parser
-
-```js
-var express = require('express')
-var typeis = require('type-is')
-
-var app = express()
-
-app.use(function bodyParser (req, res, next) {
-  if (!typeis.hasBody(req)) {
-    return next()
-  }
-
-  switch (typeis(req, ['urlencoded', 'json', 'multipart'])) {
-    case 'urlencoded':
-      // parse urlencoded body
-      throw new Error('implement urlencoded body parsing')
-    case 'json':
-      // parse json body
-      throw new Error('implement json body parsing')
-    case 'multipart':
-      // parse multipart body
-      throw new Error('implement multipart body parsing')
-    default:
-      // 415 error code
-      res.statusCode = 415
-      res.end()
-      break
-  }
-})
+```json
+{
+    "compilerOptions": {
+        "module": "system",
+        "importHelpers": true,
+        "baseUrl": "./",
+        "paths": {
+            "tslib" : ["jspm_packages/npm/tslib@2.x.y/tslib.d.ts"]
+        }
+    }
+}
 ```
 
-## License
+## Deployment
 
-[MIT](LICENSE)
+- Choose your new version number
+- Set it in `package.json` and `bower.json`
+- Create a tag: `git tag [version]`
+- Push the tag: `git push --tags`
+- Create a [release in GitHub](https://github.com/microsoft/tslib/releases)
+- Run the [publish to npm](https://github.com/microsoft/tslib/actions?query=workflow%3A%22Publish+to+NPM%22) workflow
 
-[coveralls-image]: https://badgen.net/coveralls/c/github/jshttp/type-is/master
-[coveralls-url]: https://coveralls.io/r/jshttp/type-is?branch=master
-[node-version-image]: https://badgen.net/npm/node/type-is
-[node-version-url]: https://nodejs.org/en/download
-[npm-downloads-image]: https://badgen.net/npm/dm/type-is
-[npm-url]: https://npmjs.org/package/type-is
-[npm-version-image]: https://badgen.net/npm/v/type-is
-[travis-image]: https://badgen.net/travis/jshttp/type-is/master
-[travis-url]: https://travis-ci.org/jshttp/type-is
+Done.
+
+# Contribute
+
+There are many ways to [contribute](https://github.com/Microsoft/TypeScript/blob/master/CONTRIBUTING.md) to TypeScript.
+
+* [Submit bugs](https://github.com/Microsoft/TypeScript/issues) and help us verify fixes as they are checked in.
+* Review the [source code changes](https://github.com/Microsoft/TypeScript/pulls).
+* Engage with other TypeScript users and developers on [StackOverflow](http://stackoverflow.com/questions/tagged/typescript).
+* Join the [#typescript](http://twitter.com/#!/search/realtime/%23typescript) discussion on Twitter.
+* [Contribute bug fixes](https://github.com/Microsoft/TypeScript/blob/master/CONTRIBUTING.md).
+
+# Documentation
+
+* [Quick tutorial](http://www.typescriptlang.org/Tutorial)
+* [Programming handbook](http://www.typescriptlang.org/Handbook)
+* [Homepage](http://www.typescriptlang.org/)
