@@ -1,87 +1,177 @@
-import { Readable } from 'stream';
+declare namespace postcssValueParser {
+  interface BaseNode {
+    /**
+     * The offset, inclusive, inside the CSS value at which the node starts.
+     */
+    sourceIndex: number;
 
-declare namespace getRawBody {
-  export type Encoding = string | true;
+    /**
+     * The offset, exclusive, inside the CSS value at which the node ends.
+     */
+    sourceEndIndex: number;
 
-  export interface Options {
     /**
-     * The expected length of the stream.
+     * The node's characteristic value
      */
-    length?: number | string | null;
-    /**
-     * The byte limit of the body. This is the number of bytes or any string
-     * format supported by `bytes`, for example `1000`, `'500kb'` or `'3mb'`.
-     */
-    limit?: number | string | null;
-    /**
-     * The encoding to use to decode the body into a string. By default, a
-     * `Buffer` instance will be returned when no encoding is specified. Most
-     * likely, you want `utf-8`, so setting encoding to `true` will decode as
-     * `utf-8`. You can use any type of encoding supported by `iconv-lite`.
-     */
-    encoding?: Encoding | null;
+    value: string;
   }
 
-  export interface RawBodyError extends Error {
+  interface ClosableNode {
     /**
-     * The limit in bytes.
+     * Whether the parsed CSS value ended before the node was properly closed
      */
-    limit?: number;
+    unclosed?: true;
+  }
+
+  interface AdjacentAwareNode {
     /**
-     * The expected length of the stream.
+     * The token at the start of the node
      */
-    length?: number;
-    expected?: number;
+    before: string;
+
     /**
-     * The received bytes.
+     * The token at the end of the node
      */
-    received?: number;
+    after: string;
+  }
+
+  interface CommentNode extends BaseNode, ClosableNode {
+    type: "comment";
+  }
+
+  interface DivNode extends BaseNode, AdjacentAwareNode {
+    type: "div";
+  }
+
+  interface FunctionNode extends BaseNode, ClosableNode, AdjacentAwareNode {
+    type: "function";
+
     /**
-     * The encoding.
+     * Nodes inside the function
      */
-    encoding?: string;
+    nodes: Node[];
+  }
+
+  interface SpaceNode extends BaseNode {
+    type: "space";
+  }
+
+  interface StringNode extends BaseNode, ClosableNode {
+    type: "string";
+
     /**
-     * The corresponding status code for the error.
+     * The quote type delimiting the string
      */
-    status: number;
-    statusCode: number;
+    quote: '"' | "'";
+  }
+
+  interface UnicodeRangeNode extends BaseNode {
+    type: "unicode-range";
+  }
+
+  interface WordNode extends BaseNode {
+    type: "word";
+  }
+
+  /**
+   * Any node parsed from a CSS value
+   */
+  type Node =
+    | CommentNode
+    | DivNode
+    | FunctionNode
+    | SpaceNode
+    | StringNode
+    | UnicodeRangeNode
+    | WordNode;
+
+  interface CustomStringifierCallback {
     /**
-     * The error type.
+     * @param node The node to stringify
+     * @returns The serialized CSS representation of the node
      */
-    type: string;
+    (nodes: Node): string | undefined;
+  }
+
+  interface WalkCallback {
+    /**
+     * @param node  The currently visited node
+     * @param index The index of the node in the series of parsed nodes
+     * @param nodes The series of parsed nodes
+     * @returns Returning `false` will prevent traversal of descendant nodes (only applies if `bubble` was set to `true` in the `walk()` call)
+     */
+    (node: Node, index: number, nodes: Node[]): void | boolean;
+  }
+
+  /**
+   * A CSS dimension, decomposed into its numeric and unit parts
+   */
+  interface Dimension {
+    number: string;
+    unit: string;
+  }
+
+  /**
+   * A wrapper around a parsed CSS value that allows for inspecting and walking nodes
+   */
+  interface ParsedValue {
+    /**
+     * The series of parsed nodes
+     */
+    nodes: Node[];
+
+    /**
+     * Walk all parsed nodes, applying a callback
+     *
+     * @param callback A visitor callback that will be executed for each node
+     * @param bubble   When set to `true`, walking will be done inside-out instead of outside-in
+     */
+    walk(callback: WalkCallback, bubble?: boolean): this;
+  }
+
+  interface ValueParser {
+    /**
+     * Decompose a CSS dimension into its numeric and unit part
+     *
+     * @param value The dimension to decompose
+     * @returns An object representing `number` and `unit` part of the dimension or `false` if the decomposing fails
+     */
+    unit(value: string): Dimension | false;
+
+    /**
+     * Serialize a series of nodes into a CSS value
+     *
+     * @param nodes  The nodes to stringify
+     * @param custom A custom stringifier callback
+     * @returns The generated CSS value
+     */
+    stringify(nodes: Node | Node[], custom?: CustomStringifierCallback): string;
+
+    /**
+     * Walk a series of nodes, applying a callback
+     *
+     * @param nodes    The nodes to walk
+     * @param callback A visitor callback that will be executed for each node
+     * @param bubble   When set to `true`, walking will be done inside-out instead of outside-in
+     */
+    walk(nodes: Node[], callback: WalkCallback, bubble?: boolean): void;
+
+    /**
+     * Parse a CSS value into a series of nodes to operate on
+     *
+     * @param value The value to parse
+     */
+    new (value: string): ParsedValue;
+
+    /**
+     * Parse a CSS value into a series of nodes to operate on
+     *
+     * @param value The value to parse
+     */
+    (value: string): ParsedValue;
   }
 }
 
-/**
- * Gets the entire buffer of a stream either as a `Buffer` or a string.
- * Validates the stream's length against an expected length and maximum
- * limit. Ideal for parsing request bodies.
- */
-declare function getRawBody(
-  stream: Readable,
-  callback: (err: getRawBody.RawBodyError, body: Buffer) => void
-): void;
+declare const postcssValueParser: postcssValueParser.ValueParser;
 
-declare function getRawBody(
-  stream: Readable,
-  options: (getRawBody.Options & { encoding: getRawBody.Encoding }) | getRawBody.Encoding,
-  callback: (err: getRawBody.RawBodyError, body: string) => void
-): void;
-
-declare function getRawBody(
-  stream: Readable,
-  options: getRawBody.Options,
-  callback: (err: getRawBody.RawBodyError, body: Buffer) => void
-): void;
-
-declare function getRawBody(
-  stream: Readable,
-  options: (getRawBody.Options & { encoding: getRawBody.Encoding }) | getRawBody.Encoding
-): Promise<string>;
-
-declare function getRawBody(
-  stream: Readable,
-  options?: getRawBody.Options
-): Promise<Buffer>;
-
-export = getRawBody;
+export = postcssValueParser;

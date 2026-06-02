@@ -1,44 +1,58 @@
 {
-  "name": "range-parser",
-  "author": "TJ Holowaychuk <tj@vision-media.ca> (http://tjholowaychuk.com)",
-  "description": "Range header field string parser",
-  "version": "1.2.1",
-  "contributors": [
-    "Douglas Christopher Wilson <doug@somethingdoug.com>",
-    "James Wyatt Cready <wyatt.cready@lanetix.com>",
-    "Jonathan Ong <me@jongleberry.com> (http://jongleberry.com)"
-  ],
-  "license": "MIT",
-  "keywords": [
-    "range",
-    "parser",
-    "http"
-  ],
-  "repository": "jshttp/range-parser",
-  "devDependencies": {
-    "deep-equal": "1.0.1",
-    "eslint": "5.16.0",
-    "eslint-config-standard": "12.0.0",
-    "eslint-plugin-markdown": "1.0.0",
-    "eslint-plugin-import": "2.17.2",
-    "eslint-plugin-node": "8.0.1",
-    "eslint-plugin-promise": "4.1.1",
-    "eslint-plugin-standard": "4.0.0",
-    "mocha": "6.1.4",
-    "nyc": "14.1.1"
-  },
+  "name": "postcss-value-parser",
+  "version": "4.2.0",
+  "description": "Transforms css values and at-rule params into the tree",
+  "main": "lib/index.js",
   "files": [
-    "HISTORY.md",
-    "LICENSE",
-    "index.js"
+    "lib"
   ],
-  "engines": {
-    "node": ">= 0.6"
+  "devDependencies": {
+    "eslint": "^5.16.0",
+    "husky": "^2.3.0",
+    "lint-staged": "^8.1.7",
+    "prettier": "^1.17.1",
+    "tap-spec": "^5.0.0",
+    "tape": "^4.10.2"
   },
   "scripts": {
-    "lint": "eslint --plugin markdown --ext js,md .",
-    "test": "mocha --reporter spec",
-    "test-cov": "nyc --reporter=html --reporter=text npm test",
-    "test-travis": "nyc --reporter=text npm test"
+    "lint:prettier": "prettier \"**/*.js\" \"**/*.ts\" --list-different",
+    "lint:js": "eslint . --cache",
+    "lint": "yarn lint:js && yarn lint:prettier",
+    "pretest": "yarn lint",
+    "test": "tape test/*.js | tap-spec"
+  },
+  "eslintConfig": {
+    "env": {
+      "es6": true,
+      "node": true
+    },
+    "extends": "eslint:recommended"
+  },
+  "lint-staged": {
+    "*.js": [
+      "eslint",
+      "prettier --write",
+      "git add"
+    ]
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "author": "Bogdan Chadkin <trysound@yandex.ru>",
+  "license": "MIT",
+  "homepage": "https://github.com/TrySound/postcss-value-parser",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TrySound/postcss-value-parser.git"
+  },
+  "keywords": [
+    "postcss",
+    "value",
+    "parser"
+  ],
+  "bugs": {
+    "url": "https://github.com/TrySound/postcss-value-parser/issues"
   }
 }
