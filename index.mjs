@@ -1,29 +1,33 @@
-export { addUniqueItem, moveItem, removeItem } from './array.mjs';
-export { clamp } from './clamp.mjs';
-export { invariant, warning } from './errors.mjs';
-export { MotionGlobalConfig } from './global-config.mjs';
-export { isNumericalString } from './is-numerical-string.mjs';
-export { isObject } from './is-object.mjs';
-export { isZeroValueString } from './is-zero-value-string.mjs';
-export { memo } from './memo.mjs';
-export { noop } from './noop.mjs';
-export { pipe } from './pipe.mjs';
-export { progress } from './progress.mjs';
-export { SubscriptionManager } from './subscription-manager.mjs';
-export { millisecondsToSeconds, secondsToMilliseconds } from './time-conversion.mjs';
-export { velocityPerSecond } from './velocity-per-second.mjs';
-export { hasWarned, warnOnce } from './warn-once.mjs';
-export { wrap } from './wrap.mjs';
-export { anticipate } from './easing/anticipate.mjs';
-export { backIn, backInOut, backOut } from './easing/back.mjs';
-export { circIn, circInOut, circOut } from './easing/circ.mjs';
-export { cubicBezier } from './easing/cubic-bezier.mjs';
-export { easeIn, easeInOut, easeOut } from './easing/ease.mjs';
-export { mirrorEasing } from './easing/modifiers/mirror.mjs';
-export { reverseEasing } from './easing/modifiers/reverse.mjs';
-export { steps } from './easing/steps.mjs';
-export { getEasingForSegment } from './easing/utils/get-easing-for-segment.mjs';
-export { isBezierDefinition } from './easing/utils/is-bezier-definition.mjs';
-export { isEasingArray } from './easing/utils/is-easing-array.mjs';
-export { easingDefinitionToFunction } from './easing/utils/map.mjs';
+import { hex } from './hex.mjs';
+import { hsla } from './hsla.mjs';
+import { rgba } from './rgba.mjs';
+
+const color = {
+    test: (v) => rgba.test(v) || hex.test(v) || hsla.test(v),
+    parse: (v) => {
+        if (rgba.test(v)) {
+            return rgba.parse(v);
+        }
+        else if (hsla.test(v)) {
+            return hsla.parse(v);
+        }
+        else {
+            return hex.parse(v);
+        }
+    },
+    transform: (v) => {
+        return typeof v === "string"
+            ? v
+            : v.hasOwnProperty("red")
+                ? rgba.transform(v)
+                : hsla.transform(v);
+    },
+    getAnimatableNone: (v) => {
+        const parsed = color.parse(v);
+        parsed.alpha = 0;
+        return color.transform(parsed);
+    },
+};
+
+export { color };
 //# sourceMappingURL=index.mjs.map
