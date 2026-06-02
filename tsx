@@ -10,7 +10,7 @@ case `uname` in
 esac
 
 if [ -x "$basedir/node" ]; then
-  exec "$basedir/node"  "$basedir/../rollup/dist/bin/rollup" "$@"
+  exec "$basedir/node"  "$basedir/../tsx/dist/cli.mjs" "$@"
 else 
-  exec node  "$basedir/../rollup/dist/bin/rollup" "$@"
+  exec node  "$basedir/../tsx/dist/cli.mjs" "$@"
 fi
