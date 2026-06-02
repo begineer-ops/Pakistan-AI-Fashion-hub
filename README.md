@@ -1,50 +1,170 @@
+# type-is
 
-# TypeScript
+[![NPM Version][npm-version-image]][npm-url]
+[![NPM Downloads][npm-downloads-image]][npm-url]
+[![Node.js Version][node-version-image]][node-version-url]
+[![Build Status][travis-image]][travis-url]
+[![Test Coverage][coveralls-image]][coveralls-url]
 
-[![CI](https://github.com/microsoft/TypeScript/actions/workflows/ci.yml/badge.svg)](https://github.com/microsoft/TypeScript/actions/workflows/ci.yml)
-[![npm version](https://badge.fury.io/js/typescript.svg)](https://www.npmjs.com/package/typescript)
-[![Downloads](https://img.shields.io/npm/dm/typescript.svg)](https://www.npmjs.com/package/typescript)
-[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/microsoft/TypeScript/badge)](https://securityscorecards.dev/viewer/?uri=github.com/microsoft/TypeScript)
+Infer the content-type of a request.
 
+### Install
 
-[TypeScript](https://www.typescriptlang.org/) is a language for application-scale JavaScript. TypeScript adds optional types to JavaScript that support tools for large-scale JavaScript applications for any browser, for any host, on any OS. TypeScript compiles to readable, standards-based JavaScript. Try it out at the [playground](https://www.typescriptlang.org/play/), and stay up to date via [our blog](https://blogs.msdn.microsoft.com/typescript) and [Twitter account](https://twitter.com/typescript).
+This is a [Node.js](https://nodejs.org/en/) module available through the
+[npm registry](https://www.npmjs.com/). Installation is done using the
+[`npm install` command](https://docs.npmjs.com/getting-started/installing-npm-packages-locally):
 
-Find others who are using TypeScript at [our community page](https://www.typescriptlang.org/community/).
-
-## Installing
-
-For the latest stable version:
-
-```bash
-npm install -D typescript
+```sh
+$ npm install type-is
 ```
 
-For our nightly builds:
+## API
 
-```bash
-npm install -D typescript@next
+```js
+var http = require('http')
+var typeis = require('type-is')
+
+http.createServer(function (req, res) {
+  var istext = typeis(req, ['text/*'])
+  res.end('you ' + (istext ? 'sent' : 'did not send') + ' me text')
+})
 ```
 
-## Contribute
+### typeis(request, types)
 
-There are many ways to [contribute](https://github.com/microsoft/TypeScript/blob/main/CONTRIBUTING.md) to TypeScript.
-* [Submit bugs](https://github.com/microsoft/TypeScript/issues) and help us verify fixes as they are checked in.
-* Review the [source code changes](https://github.com/microsoft/TypeScript/pulls).
-* Engage with other TypeScript users and developers on [StackOverflow](https://stackoverflow.com/questions/tagged/typescript).
-* Help each other in the [TypeScript Community Discord](https://discord.gg/typescript).
-* Join the [#typescript](https://twitter.com/search?q=%23TypeScript) discussion on Twitter.
-* [Contribute bug fixes](https://github.com/microsoft/TypeScript/blob/main/CONTRIBUTING.md).
+Checks if the `request` is one of the `types`. If the request has no body,
+even if there is a `Content-Type` header, then `null` is returned. If the
+`Content-Type` header is invalid or does not matches any of the `types`, then
+`false` is returned. Otherwise, a string of the type that matched is returned.
 
-This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/). For more information see
-the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or contact [opencode@microsoft.com](mailto:opencode@microsoft.com)
-with any additional questions or comments.
+The `request` argument is expected to be a Node.js HTTP request. The `types`
+argument is an array of type strings.
 
-## Documentation
+Each type in the `types` array can be one of the following:
 
-*  [TypeScript in 5 minutes](https://www.typescriptlang.org/docs/handbook/typescript-in-5-minutes.html)
-*  [Programming handbook](https://www.typescriptlang.org/docs/handbook/intro.html)
-*  [Homepage](https://www.typescriptlang.org/)
+- A file extension name such as `json`. This name will be returned if matched.
+- A mime type such as `application/json`.
+- A mime type with a wildcard such as `*/*` or `*/json` or `application/*`.
+  The full mime type will be returned if matched.
+- A suffix such as `+json`. This can be combined with a wildcard such as
+  `*/vnd+json` or `application/*+json`. The full mime type will be returned
+  if matched.
 
-## Roadmap
+Some examples to illustrate the inputs and returned value:
 
-For details on our planned features and future direction, please refer to our [roadmap](https://github.com/microsoft/TypeScript/wiki/Roadmap).
+<!-- eslint-disable no-undef -->
+
+```js
+// req.headers.content-type = 'application/json'
+
+typeis(req, ['json']) // => 'json'
+typeis(req, ['html', 'json']) // => 'json'
+typeis(req, ['application/*']) // => 'application/json'
+typeis(req, ['application/json']) // => 'application/json'
+
+typeis(req, ['html']) // => false
+```
+
+### typeis.hasBody(request)
+
+Returns a Boolean if the given `request` has a body, regardless of the
+`Content-Type` header.
+
+Having a body has no relation to how large the body is (it may be 0 bytes).
+This is similar to how file existence works. If a body does exist, then this
+indicates that there is data to read from the Node.js request stream.
+
+<!-- eslint-disable no-undef -->
+
+```js
+if (typeis.hasBody(req)) {
+  // read the body, since there is one
+
+  req.on('data', function (chunk) {
+    // ...
+  })
+}
+```
+
+### typeis.is(mediaType, types)
+
+Checks if the `mediaType` is one of the `types`. If the `mediaType` is invalid
+or does not matches any of the `types`, then `false` is returned. Otherwise, a
+string of the type that matched is returned.
+
+The `mediaType` argument is expected to be a
+[media type](https://tools.ietf.org/html/rfc6838) string. The `types` argument
+is an array of type strings.
+
+Each type in the `types` array can be one of the following:
+
+- A file extension name such as `json`. This name will be returned if matched.
+- A mime type such as `application/json`.
+- A mime type with a wildcard such as `*/*` or `*/json` or `application/*`.
+  The full mime type will be returned if matched.
+- A suffix such as `+json`. This can be combined with a wildcard such as
+  `*/vnd+json` or `application/*+json`. The full mime type will be returned
+  if matched.
+
+Some examples to illustrate the inputs and returned value:
+
+<!-- eslint-disable no-undef -->
+
+```js
+var mediaType = 'application/json'
+
+typeis.is(mediaType, ['json']) // => 'json'
+typeis.is(mediaType, ['html', 'json']) // => 'json'
+typeis.is(mediaType, ['application/*']) // => 'application/json'
+typeis.is(mediaType, ['application/json']) // => 'application/json'
+
+typeis.is(mediaType, ['html']) // => false
+```
+
+## Examples
+
+### Example body parser
+
+```js
+var express = require('express')
+var typeis = require('type-is')
+
+var app = express()
+
+app.use(function bodyParser (req, res, next) {
+  if (!typeis.hasBody(req)) {
+    return next()
+  }
+
+  switch (typeis(req, ['urlencoded', 'json', 'multipart'])) {
+    case 'urlencoded':
+      // parse urlencoded body
+      throw new Error('implement urlencoded body parsing')
+    case 'json':
+      // parse json body
+      throw new Error('implement json body parsing')
+    case 'multipart':
+      // parse multipart body
+      throw new Error('implement multipart body parsing')
+    default:
+      // 415 error code
+      res.statusCode = 415
+      res.end()
+      break
+  }
+})
+```
+
+## License
+
+[MIT](LICENSE)
+
+[coveralls-image]: https://badgen.net/coveralls/c/github/jshttp/type-is/master
+[coveralls-url]: https://coveralls.io/r/jshttp/type-is?branch=master
+[node-version-image]: https://badgen.net/npm/node/type-is
+[node-version-url]: https://nodejs.org/en/download
+[npm-downloads-image]: https://badgen.net/npm/dm/type-is
+[npm-url]: https://npmjs.org/package/type-is
+[npm-version-image]: https://badgen.net/npm/v/type-is
+[travis-image]: https://badgen.net/travis/jshttp/type-is/master
+[travis-url]: https://travis-ci.org/jshttp/type-is
