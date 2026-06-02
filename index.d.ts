@@ -1,219 +1,147 @@
-/// <reference types="node" />
+declare function addUniqueItem<T>(arr: T[], item: T): void;
+declare function removeItem<T>(arr: T[], item: T): void;
+declare function moveItem<T>([...arr]: T[], fromIndex: number, toIndex: number): T[];
 
-import {RequestOptions} from 'http';
-import {FormData} from 'formdata-polyfill/esm.min.js';
-import {
-	Blob,
-	blobFrom,
-	blobFromSync,
-	File,
-	fileFrom,
-	fileFromSync
-} from 'fetch-blob/from.js';
+declare const clamp: (min: number, max: number, v: number) => number;
 
-type AbortSignal = {
-	readonly aborted: boolean;
+type DevMessage = (check: boolean, message: string, errorCode?: string) => void;
+declare let warning: DevMessage;
+declare let invariant: DevMessage;
 
-	addEventListener: (type: 'abort', listener: (this: AbortSignal) => void) => void;
-	removeEventListener: (type: 'abort', listener: (this: AbortSignal) => void) => void;
-};
-
-export type HeadersInit = Headers | Record<string, string> | Iterable<readonly [string, string]> | Iterable<Iterable<string>>;
-
-export {
-	FormData,
-	Blob,
-	blobFrom,
-	blobFromSync,
-	File,
-	fileFrom,
-	fileFromSync
+declare const MotionGlobalConfig: {
+    skipAnimations?: boolean;
+    instantAnimations?: boolean;
+    useManualTiming?: boolean;
+    WillChange?: any;
+    mix?: <T>(a: T, b: T) => (p: number) => T;
 };
 
 /**
- * This Fetch API interface allows you to perform various actions on HTTP request and response headers.
- * These actions include retrieving, setting, adding to, and removing.
- * A Headers object has an associated header list, which is initially empty and consists of zero or more name and value pairs.
- * You can add to this using methods like append() (see Examples.)
- * In all methods of this interface, header names are matched by case-insensitive byte sequence.
- * */
-export class Headers {
-	constructor(init?: HeadersInit);
+ * Check if value is a numerical string, ie a string that is purely a number eg "100" or "-100.1"
+ */
+declare const isNumericalString: (v: string) => boolean;
 
-	append(name: string, value: string): void;
-	delete(name: string): void;
-	get(name: string): string | null;
-	has(name: string): boolean;
-	set(name: string, value: string): void;
-	forEach(
-		callbackfn: (value: string, key: string, parent: Headers) => void,
-		thisArg?: any
-	): void;
+declare const isObject: (value: unknown) => value is object;
 
-	[Symbol.iterator](): IterableIterator<[string, string]>;
-	/**
-	 * Returns an iterator allowing to go through all key/value pairs contained in this object.
-	 */
-	entries(): IterableIterator<[string, string]>;
-	/**
-	 * Returns an iterator allowing to go through all keys of the key/value pairs contained in this object.
-	 */
-	keys(): IterableIterator<string>;
-	/**
-	 * Returns an iterator allowing to go through all values of the key/value pairs contained in this object.
-	 */
-	values(): IterableIterator<string>;
+/**
+ * Check if the value is a zero value string like "0px" or "0%"
+ */
+declare const isZeroValueString: (v: string) => boolean;
 
-	/** Node-fetch extension */
-	raw(): Record<string, string[]>;
+declare function memo<T extends any>(callback: () => T): () => T;
+
+declare const noop: <T>(any: T) => T;
+
+/**
+ * Pipe
+ * Compose other transformers to run linearily
+ * pipe(min(20), max(40))
+ * @param  {...functions} transformers
+ * @return {function}
+ */
+declare const pipe: (...transformers: Function[]) => Function;
+
+declare const progress: (from: number, to: number, value: number) => number;
+
+type GenericHandler = (...args: any) => void;
+declare class SubscriptionManager<Handler extends GenericHandler> {
+    private subscriptions;
+    add(handler: Handler): VoidFunction;
+    notify(a?: Parameters<Handler>[0], b?: Parameters<Handler>[1], c?: Parameters<Handler>[2]): void;
+    getSize(): number;
+    clear(): void;
 }
 
-export interface RequestInit {
-	/**
-	 * A BodyInit object or null to set request's body.
-	 */
-	body?: BodyInit | null;
-	/**
-	 * A Headers object, an object literal, or an array of two-item arrays to set request's headers.
-	 */
-	headers?: HeadersInit;
-	/**
-	 * A string to set request's method.
-	 */
-	method?: string;
-	/**
-	 * A string indicating whether request follows redirects, results in an error upon encountering a redirect, or returns the redirect (in an opaque fashion). Sets request's redirect.
-	 */
-	redirect?: RequestRedirect;
-	/**
-	 * An AbortSignal to set request's signal.
-	 */
-	signal?: AbortSignal | null;
-	/**
-	 * A string whose value is a same-origin URL, "about:client", or the empty string, to set request’s referrer.
-	 */
-	referrer?: string;
-	/**
-	 * A referrer policy to set request’s referrerPolicy.
-	 */
-	referrerPolicy?: ReferrerPolicy;
+/**
+ * Converts seconds to milliseconds
+ *
+ * @param seconds - Time in seconds.
+ * @return milliseconds - Converted time in milliseconds.
+ */
+declare const secondsToMilliseconds: (seconds: number) => number;
+declare const millisecondsToSeconds: (milliseconds: number) => number;
 
-	// Node-fetch extensions to the whatwg/fetch spec
-	agent?: RequestOptions['agent'] | ((parsedUrl: URL) => RequestOptions['agent']);
-	compress?: boolean;
-	counter?: number;
-	follow?: number;
-	hostname?: string;
-	port?: number;
-	protocol?: string;
-	size?: number;
-	highWaterMark?: number;
-	insecureHTTPParser?: boolean;
+declare const velocityPerSecond: (velocity: number, frameDuration: number) => number;
+
+declare function hasWarned(message: string): boolean;
+declare function warnOnce(condition: boolean, message: string, errorCode?: string): void;
+
+declare const wrap: (min: number, max: number, v: number) => number;
+
+declare const anticipate: (p: number) => number;
+
+declare const backOut: (t: number) => number;
+declare const backIn: EasingFunction;
+declare const backInOut: EasingFunction;
+
+type EasingFunction = (v: number) => number;
+type EasingModifier = (easing: EasingFunction) => EasingFunction;
+type BezierDefinition = readonly [number, number, number, number];
+type EasingDefinition = BezierDefinition | "linear" | "easeIn" | "easeOut" | "easeInOut" | "circIn" | "circOut" | "circInOut" | "backIn" | "backOut" | "backInOut" | "anticipate";
+/**
+ * The easing function to use. Set as one of:
+ *
+ * - The name of an in-built easing function.
+ * - An array of four numbers to define a cubic bezier curve.
+ * - An easing function, that accepts and returns a progress value between `0` and `1`.
+ *
+ * @public
+ */
+type Easing = EasingDefinition | EasingFunction;
+
+declare const circIn: EasingFunction;
+declare const circOut: EasingFunction;
+declare const circInOut: EasingFunction;
+
+declare function cubicBezier(mX1: number, mY1: number, mX2: number, mY2: number): (t: number) => number;
+
+declare const easeIn: (t: number) => number;
+declare const easeOut: (t: number) => number;
+declare const easeInOut: (t: number) => number;
+
+declare const mirrorEasing: EasingModifier;
+
+declare const reverseEasing: EasingModifier;
+
+type Direction = "start" | "end";
+declare function steps(numSteps: number, direction?: Direction): EasingFunction;
+
+declare function getEasingForSegment(easing: Easing | Easing[], i: number): Easing;
+
+declare const isBezierDefinition: (easing: Easing | Easing[]) => easing is BezierDefinition;
+
+declare const isEasingArray: (ease: any) => ease is Easing[];
+
+declare const easingDefinitionToFunction: (definition: Easing) => EasingFunction;
+
+interface Point {
+    x: number;
+    y: number;
 }
-
-export interface ResponseInit {
-	headers?: HeadersInit;
-	status?: number;
-	statusText?: string;
+interface Axis {
+    min: number;
+    max: number;
 }
-
-export type BodyInit =
-	| Blob
-	| Buffer
-	| URLSearchParams
-	| FormData
-	| NodeJS.ReadableStream
-	| string;
-declare class BodyMixin {
-	constructor(body?: BodyInit, options?: {size?: number});
-
-	readonly body: NodeJS.ReadableStream | null;
-	readonly bodyUsed: boolean;
-	readonly size: number;
-
-	/** @deprecated Use `body.arrayBuffer()` instead. */
-	buffer(): Promise<Buffer>;
-	arrayBuffer(): Promise<ArrayBuffer>;
-	formData(): Promise<FormData>;
-	blob(): Promise<Blob>;
-	json(): Promise<unknown>;
-	text(): Promise<string>;
+interface Box {
+    x: Axis;
+    y: Axis;
 }
-
-// `Body` must not be exported as a class since it's not exported from the JavaScript code.
-export interface Body extends Pick<BodyMixin, keyof BodyMixin> {}
-
-export type RequestRedirect = 'error' | 'follow' | 'manual';
-export type ReferrerPolicy = '' | 'no-referrer' | 'no-referrer-when-downgrade' | 'same-origin' | 'origin' | 'strict-origin' | 'origin-when-cross-origin' | 'strict-origin-when-cross-origin' | 'unsafe-url';
-export type RequestInfo = string | Request;
-export class Request extends BodyMixin {
-	constructor(input: URL | RequestInfo, init?: RequestInit);
-
-	/**
-	 * Returns a Headers object consisting of the headers associated with request. Note that headers added in the network layer by the user agent will not be accounted for in this object, e.g., the "Host" header.
-	 */
-	readonly headers: Headers;
-	/**
-	 * Returns request's HTTP method, which is "GET" by default.
-	 */
-	readonly method: string;
-	/**
-	 * Returns the redirect mode associated with request, which is a string indicating how redirects for the request will be handled during fetching. A request will follow redirects by default.
-	 */
-	readonly redirect: RequestRedirect;
-	/**
-	 * Returns the signal associated with request, which is an AbortSignal object indicating whether or not request has been aborted, and its abort event handler.
-	 */
-	readonly signal: AbortSignal;
-	/**
-	 * Returns the URL of request as a string.
-	 */
-	readonly url: string;
-	/**
-	 * A string whose value is a same-origin URL, "about:client", or the empty string, to set request’s referrer.
-	 */
-	readonly referrer: string;
-	/**
-	 * A referrer policy to set request’s referrerPolicy.
-	 */
-	readonly referrerPolicy: ReferrerPolicy;
-	clone(): Request;
+interface BoundingBox {
+    top: number;
+    right: number;
+    bottom: number;
+    left: number;
 }
-
-type ResponseType = 'basic' | 'cors' | 'default' | 'error' | 'opaque' | 'opaqueredirect';
-
-export class Response extends BodyMixin {
-	constructor(body?: BodyInit | null, init?: ResponseInit);
-
-	readonly headers: Headers;
-	readonly ok: boolean;
-	readonly redirected: boolean;
-	readonly status: number;
-	readonly statusText: string;
-	readonly type: ResponseType;
-	readonly url: string;
-	clone(): Response;
-
-	static error(): Response;
-	static redirect(url: string, status?: number): Response;
-	static json(data: any, init?: ResponseInit): Response;
+interface AxisDelta {
+    translate: number;
+    scale: number;
+    origin: number;
+    originPoint: number;
 }
-
-export class FetchError extends Error {
-	constructor(message: string, type: string, systemError?: Record<string, unknown>);
-
-	name: 'FetchError';
-	[Symbol.toStringTag]: 'FetchError';
-	type: string;
-	code?: string;
-	errno?: string;
+interface Delta {
+    x: AxisDelta;
+    y: AxisDelta;
 }
+type TransformPoint = (point: Point) => Point;
 
-export class AbortError extends Error {
-	type: string;
-	name: 'AbortError';
-	[Symbol.toStringTag]: 'AbortError';
-}
-
-export function isRedirect(code: number): boolean;
-export default function fetch(url: URL | RequestInfo, init?: RequestInit): Promise<Response>;
+export { type Axis, type AxisDelta, type BezierDefinition, type BoundingBox, type Box, type Delta, type DevMessage, type Direction, type Easing, type EasingDefinition, type EasingFunction, type EasingModifier, MotionGlobalConfig, type Point, SubscriptionManager, type TransformPoint, addUniqueItem, anticipate, backIn, backInOut, backOut, circIn, circInOut, circOut, clamp, cubicBezier, easeIn, easeInOut, easeOut, easingDefinitionToFunction, getEasingForSegment, hasWarned, invariant, isBezierDefinition, isEasingArray, isNumericalString, isObject, isZeroValueString, memo, millisecondsToSeconds, mirrorEasing, moveItem, noop, pipe, progress, removeItem, reverseEasing, secondsToMilliseconds, steps, velocityPerSecond, warnOnce, warning, wrap };

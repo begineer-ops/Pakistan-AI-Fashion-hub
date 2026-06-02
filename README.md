@@ -1,46 +1,39 @@
-# DOMException
-An implementation of the DOMException class from NodeJS
+# Nano ID
 
-NodeJS has DOMException built in, but it's not globally available, and you can't require/import it from somewhere.
+<img src="https://ai.github.io/nanoid/logo.svg" align="right"
+     alt="Nano ID logo by Anton Lovchikov" width="180" height="94">
 
-This package exposes the [`DOMException`](https://developer.mozilla.org/en-US/docs/Web/API/DOMException) class that comes from NodeJS itself. (including all of the legacy codes)
+**English** | [Русский](./README.ru.md) | [简体中文](./README.zh-CN.md) | [Bahasa Indonesia](./README.id-ID.md)
 
-<sub>(plz don't depend on this package in any other environment other than node >=10.5)</sub>
+A tiny, secure, URL-friendly, unique string ID generator for JavaScript.
+
+> “An amazing level of senseless perfectionism,
+> which is simply impossible not to respect.”
+
+* **Small.** 130 bytes (minified and gzipped). No dependencies.
+  [Size Limit] controls the size.
+* **Fast.** It is 2 times faster than UUID.
+* **Safe.** It uses hardware random generator. Can be used in clusters.
+* **Short IDs.** It uses a larger alphabet than UUID (`A-Za-z0-9_-`).
+  So ID size was reduced from 36 to 21 symbols.
+* **Portable.** Nano ID was ported
+  to [20 programming languages](#other-programming-languages).
 
 ```js
-import DOMException from 'node-domexception'
-import { MessageChannel } from 'worker_threads'
-
-async function hello() {
-  const port = new MessageChannel().port1
-  const ab = new ArrayBuffer()
-  port.postMessage(ab, [ab, ab])
-}
-
-hello().catch(err => {
-  console.assert(err.name === 'DataCloneError')
-  console.assert(err.code === 25)
-  console.assert(err instanceof DOMException)
-})
-
-const e1 = new DOMException('Something went wrong', 'BadThingsError')
-console.assert(e1.name === 'BadThingsError')
-console.assert(e1.code === 0)
-
-const e2 = new DOMException('Another exciting error message', 'NoModificationAllowedError')
-console.assert(e2.name === 'NoModificationAllowedError')
-console.assert(e2.code === 7)
-
-console.assert(DOMException.INUSE_ATTRIBUTE_ERR === 10)
+import { nanoid } from 'nanoid'
+model.id = nanoid() //=> "V1StGXR8_Z5jdHi6B-myT"
 ```
 
-# Background
+Supports modern browsers, IE [with Babel], Node.js and React Native.
 
-The only possible way is to use some web-ish tools that have been introduced into NodeJS that throws a DOMException and catch the constructor. This is exactly what this package dose for you and exposes it.<br>
-This way you will have the same class that NodeJS has and you can check if the error is a instance of DOMException.<br>
-The instanceof check would not have worked with a custom class such as the DOMException provided by domenic which also is much larger in size since it has to re-construct the hole class from the ground up.
+[online tool]: https://gitpod.io/#https://github.com/ai/nanoid/
+[with Babel]:  https://developer.epages.com/blog/coding/how-to-transpile-node-modules-with-babel-and-webpack-in-a-monorepo/
+[Size Limit]:  https://github.com/ai/size-limit
 
-The DOMException is used in many places such as the Fetch API, File & Blobs, PostMessaging and more. <br>
-Why they decided to call it **DOM**, I don't know
+<a href="https://evilmartians.com/?utm_source=nanoid">
+  <img src="https://evilmartians.com/badges/sponsored-by-evil-martians.svg"
+       alt="Sponsored by Evil Martians" width="236" height="54">
+</a>
 
-Please consider sponsoring if you find this helpful
+## Docs
+Read full docs **[here](https://github.com/ai/nanoid#readme)**.
