@@ -1,4 +1,4 @@
-/*! node-domexception. MIT License. Jimmy Wärting <https://jimmy.warting.se/opensource> */
+/*! node-DOMException. MIT License. Jimmy Wärting <https://jimmy.warting.se/opensource> */
 
 if (!globalThis.DOMException) {
   try {
@@ -7,6 +7,7 @@ if (!globalThis.DOMException) {
     ab = new ArrayBuffer()
     port.postMessage(ab, [ab, ab])
   } catch (err) {
+    console.log(err.code, err.name, err.message)
     err.constructor.name === 'DOMException' && (
       globalThis.DOMException = err.constructor
     )
