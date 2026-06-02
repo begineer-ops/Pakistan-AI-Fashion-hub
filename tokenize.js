@@ -1,416 +1,270 @@
-"use strict";
-module.exports = tokenize;
+'use strict'
 
-var delimRe        = /[\s{}=;:[\],'"()<>]/g,
-    stringDoubleRe = /(?:"([^"\\]*(?:\\.[^"\\]*)*)")/g,
-    stringSingleRe = /(?:'([^'\\]*(?:\\.[^'\\]*)*)')/g;
+const SINGLE_QUOTE = "'".charCodeAt(0)
+const DOUBLE_QUOTE = '"'.charCodeAt(0)
+const BACKSLASH = '\\'.charCodeAt(0)
+const SLASH = '/'.charCodeAt(0)
+const NEWLINE = '\n'.charCodeAt(0)
+const SPACE = ' '.charCodeAt(0)
+const FEED = '\f'.charCodeAt(0)
+const TAB = '\t'.charCodeAt(0)
+const CR = '\r'.charCodeAt(0)
+const OPEN_SQUARE = '['.charCodeAt(0)
+const CLOSE_SQUARE = ']'.charCodeAt(0)
+const OPEN_PARENTHESES = '('.charCodeAt(0)
+const CLOSE_PARENTHESES = ')'.charCodeAt(0)
+const OPEN_CURLY = '{'.charCodeAt(0)
+const CLOSE_CURLY = '}'.charCodeAt(0)
+const SEMICOLON = ';'.charCodeAt(0)
+const ASTERISK = '*'.charCodeAt(0)
+const COLON = ':'.charCodeAt(0)
+const AT = '@'.charCodeAt(0)
 
-var setCommentRe = /^ *[*/]+ */,
-    setCommentAltRe = /^\s*\*?\/*/,
-    setCommentSplitRe = /\n/g,
-    whitespaceRe = /\s/,
-    unescapeRe = /\\(.?)/g;
+const RE_AT_END = /[\t\n\f\r "#'()/;[\\\]{}]/g
+const RE_WORD_END = /[\t\n\f\r !"#'():;@[\\\]{}]|\/(?=\*)/g
+const RE_BAD_BRACKET = /.[\r\n"'(/\\]/
+const RE_HEX_ESCAPE = /[\da-f]/i
 
-var unescapeMap = {
-    "0": "\0",
-    "r": "\r",
-    "n": "\n",
-    "t": "\t"
-};
+module.exports = function tokenizer(input, options = {}) {
+  let css = input.css.valueOf()
+  let ignore = options.ignoreErrors
 
-/**
- * Unescapes a string.
- * @param {string} str String to unescape
- * @returns {string} Unescaped string
- * @property {Object.<string,string>} map Special characters map
- * @memberof tokenize
- */
-function unescape(str) {
-    return str.replace(unescapeRe, function($0, $1) {
-        switch ($1) {
-            case "\\":
-            case "":
-                return $1;
-            default:
-                return unescapeMap[$1] || "";
-        }
-    });
-}
+  let code, content, escape, next, quote
+  let currentToken, escaped, escapePos, n, prev
 
-tokenize.unescape = unescape;
+  let length = css.length
+  let pos = 0
+  let buffer = []
+  let returned = []
+  let lastBadParen = -1
 
-/**
- * Gets the next token and advances.
- * @typedef TokenizerHandleNext
- * @type {function}
- * @returns {string|null} Next token or `null` on eof
- */
+  function position() {
+    return pos
+  }
 
-/**
- * Peeks for the next token.
- * @typedef TokenizerHandlePeek
- * @type {function}
- * @returns {string|null} Next token or `null` on eof
- */
+  function unclosed(what) {
+    throw input.error('Unclosed ' + what, pos)
+  }
 
-/**
- * Pushes a token back to the stack.
- * @typedef TokenizerHandlePush
- * @type {function}
- * @param {string} token Token
- * @returns {undefined}
- */
+  function endOfFile() {
+    return returned.length === 0 && pos >= length
+  }
 
-/**
- * Skips the next token.
- * @typedef TokenizerHandleSkip
- * @type {function}
- * @param {string} expected Expected token
- * @param {boolean} [optional=false] If optional
- * @returns {boolean} Whether the token matched
- * @throws {Error} If the token didn't match and is not optional
- */
+  function nextToken(opts) {
+    if (returned.length) return returned.pop()
+    if (pos >= length) return
 
-/**
- * Gets the comment on the previous line or, alternatively, the line comment on the specified line.
- * @typedef TokenizerHandleCmnt
- * @type {function}
- * @param {number} [line] Line number
- * @returns {string|null} Comment text or `null` if none
- */
+    let ignoreUnclosed = opts ? opts.ignoreUnclosed : false
 
-/**
- * Handle object returned from {@link tokenize}.
- * @interface ITokenizerHandle
- * @property {TokenizerHandleNext} next Gets the next token and advances (`null` on eof)
- * @property {TokenizerHandlePeek} peek Peeks for the next token (`null` on eof)
- * @property {TokenizerHandlePush} push Pushes a token back to the stack
- * @property {TokenizerHandleSkip} skip Skips a token, returns its presence and advances or, if non-optional and not present, throws
- * @property {TokenizerHandleCmnt} cmnt Gets the comment on the previous line or the line comment on the specified line, if any
- * @property {number} line Current line number
- */
+    code = css.charCodeAt(pos)
 
-/**
- * Tokenizes the given .proto source and returns an object with useful utility functions.
- * @param {string} source Source contents
- * @param {boolean} alternateCommentMode Whether we should activate alternate comment parsing mode.
- * @returns {ITokenizerHandle} Tokenizer handle
- */
-function tokenize(source, alternateCommentMode) {
-    /* eslint-disable callback-return */
-    source = source.toString();
-
-    var offset = 0,
-        length = source.length,
-        line = 1,
-        lastCommentLine = 0,
-        comments = {};
-
-    var stack = [];
-
-    var stringDelim = null;
-
-    /* istanbul ignore next */
-    /**
-     * Creates an error for illegal syntax.
-     * @param {string} subject Subject
-     * @returns {Error} Error created
-     * @inner
-     */
-    function illegal(subject) {
-        return Error("illegal " + subject + " (line " + line + ")");
-    }
-
-    /**
-     * Reads a string till its end.
-     * @returns {string} String read
-     * @inner
-     */
-    function readString() {
-        var re = stringDelim === "'" ? stringSingleRe : stringDoubleRe;
-        re.lastIndex = offset - 1;
-        var match = re.exec(source);
-        if (!match)
-            throw illegal("string");
-        offset = re.lastIndex;
-        push(stringDelim);
-        stringDelim = null;
-        return unescape(match[1]);
-    }
-
-    /**
-     * Gets the character at `pos` within the source.
-     * @param {number} pos Position
-     * @returns {string} Character
-     * @inner
-     */
-    function charAt(pos) {
-        return source.charAt(pos);
-    }
-
-    /**
-     * Sets the current comment text.
-     * @param {number} start Start offset
-     * @param {number} end End offset
-     * @param {boolean} isLeading set if a leading comment
-     * @returns {undefined}
-     * @inner
-     */
-    function setComment(start, end, isLeading) {
-        var comment = {
-            type: source.charAt(start++),
-            lineEmpty: false,
-            leading: isLeading,
-        };
-        var lookback;
-        if (alternateCommentMode) {
-            lookback = 2;  // alternate comment parsing: "//" or "/*"
-        } else {
-            lookback = 3;  // "///" or "/**"
-        }
-        var commentOffset = start - lookback,
-            c;
+    switch (code) {
+      case NEWLINE:
+      case SPACE:
+      case TAB:
+      case CR:
+      case FEED: {
+        next = pos
         do {
-            if (--commentOffset < 0 ||
-                    (c = source.charAt(commentOffset)) === "\n") {
-                comment.lineEmpty = true;
-                break;
+          next += 1
+          code = css.charCodeAt(next)
+        } while (
+          code === SPACE ||
+          code === NEWLINE ||
+          code === TAB ||
+          code === CR ||
+          code === FEED
+        )
+
+        currentToken = ['space', css.slice(pos, next)]
+        pos = next - 1
+        break
+      }
+
+      case OPEN_SQUARE:
+      case CLOSE_SQUARE:
+      case OPEN_CURLY:
+      case CLOSE_CURLY:
+      case COLON:
+      case SEMICOLON:
+      case CLOSE_PARENTHESES: {
+        let controlChar = String.fromCharCode(code)
+        currentToken = [controlChar, controlChar, pos]
+        break
+      }
+
+      case OPEN_PARENTHESES: {
+        prev = buffer.length ? buffer.pop()[1] : ''
+        n = css.charCodeAt(pos + 1)
+        if (
+          prev === 'url' &&
+          n !== SINGLE_QUOTE &&
+          n !== DOUBLE_QUOTE &&
+          n !== SPACE &&
+          n !== NEWLINE &&
+          n !== TAB &&
+          n !== FEED &&
+          n !== CR
+        ) {
+          next = pos
+          do {
+            escaped = false
+            next = css.indexOf(')', next + 1)
+            if (next === -1) {
+              if (ignore || ignoreUnclosed) {
+                next = pos
+                break
+              } else {
+                unclosed('bracket')
+              }
             }
-        } while (c === " " || c === "\t");
-        var lines = source
-            .substring(start, end)
-            .split(setCommentSplitRe);
-        for (var i = 0; i < lines.length; ++i)
-            lines[i] = lines[i]
-                .replace(alternateCommentMode ? setCommentAltRe : setCommentRe, "")
-                .trim();
-        comment.text = lines
-            .join("\n")
-            .trim();
-
-        comments[line] = comment;
-        lastCommentLine = line;
-    }
-
-    function isDoubleSlashCommentLine(startOffset) {
-        var endOffset = findEndOfLine(startOffset);
-
-        // see if remaining line matches comment pattern
-        var lineText = source.substring(startOffset, endOffset);
-        var isComment = /^\s*\/\//.test(lineText);
-        return isComment;
-    }
-
-    function findEndOfLine(cursor) {
-        // find end of cursor's line
-        var endOffset = cursor;
-        while (endOffset < length && charAt(endOffset) !== "\n") {
-            endOffset++;
-        }
-        return endOffset;
-    }
-
-    /**
-     * Obtains the next token.
-     * @returns {string|null} Next token or `null` on eof
-     * @inner
-     */
-    function next() {
-        if (stack.length > 0)
-            return stack.shift();
-        if (stringDelim)
-            return readString();
-        var repeat,
-            prev,
-            curr,
-            start,
-            isDoc,
-            isLeadingComment = offset === 0;
-        do {
-            if (offset === length)
-                return null;
-            repeat = false;
-            while (whitespaceRe.test(curr = charAt(offset))) {
-                if (curr === "\n") {
-                    isLeadingComment = true;
-                    ++line;
-                }
-                if (++offset === length)
-                    return null;
+            escapePos = next
+            while (css.charCodeAt(escapePos - 1) === BACKSLASH) {
+              escapePos -= 1
+              escaped = !escaped
             }
+          } while (escaped)
 
-            if (charAt(offset) === "/") {
-                if (++offset === length) {
-                    throw illegal("comment");
-                }
-                if (charAt(offset) === "/") { // Line
-                    if (!alternateCommentMode) {
-                        // check for triple-slash comment
-                        isDoc = charAt(start = offset + 1) === "/";
+          currentToken = ['brackets', css.slice(pos, next + 1), pos, next]
 
-                        while (charAt(++offset) !== "\n") {
-                            if (offset === length) {
-                                return null;
-                            }
-                        }
-                        ++offset;
-                        if (isDoc) {
-                            setComment(start, offset - 1, isLeadingComment);
-                            // Trailing comment cannot not be multi-line,
-                            // so leading comment state should be reset to handle potential next comments
-                            isLeadingComment = true;
-                        }
-                        ++line;
-                        repeat = true;
-                    } else {
-                        // check for double-slash comments, consolidating consecutive lines
-                        start = offset;
-                        isDoc = false;
-                        if (isDoubleSlashCommentLine(offset - 1)) {
-                            isDoc = true;
-                            do {
-                                offset = findEndOfLine(offset);
-                                if (offset === length) {
-                                    break;
-                                }
-                                offset++;
-                                if (!isLeadingComment) {
-                                    // Trailing comment cannot not be multi-line
-                                    break;
-                                }
-                            } while (isDoubleSlashCommentLine(offset));
-                        } else {
-                            offset = Math.min(length, findEndOfLine(offset) + 1);
-                        }
-                        if (isDoc) {
-                            setComment(start, offset, isLeadingComment);
-                            isLeadingComment = true;
-                        }
-                        line++;
-                        repeat = true;
-                    }
-                } else if ((curr = charAt(offset)) === "*") { /* Block */
-                    // check for /** (regular comment mode) or /* (alternate comment mode)
-                    start = offset + 1;
-                    isDoc = alternateCommentMode || charAt(start) === "*";
-                    do {
-                        if (curr === "\n") {
-                            ++line;
-                        }
-                        if (++offset === length) {
-                            throw illegal("comment");
-                        }
-                        prev = curr;
-                        curr = charAt(offset);
-                    } while (prev !== "*" || curr !== "/");
-                    ++offset;
-                    if (isDoc) {
-                        setComment(start, offset - 2, isLeadingComment);
-                        isLeadingComment = true;
-                    }
-                    repeat = true;
-                } else {
-                    return "/";
-                }
-            }
-        } while (repeat);
-
-        // offset !== length if we got here
-
-        var end = offset;
-        delimRe.lastIndex = 0;
-        var delim = delimRe.test(charAt(end++));
-        if (!delim)
-            while (end < length && !delimRe.test(charAt(end)))
-                ++end;
-        var token = source.substring(offset, offset = end);
-        if (token === "\"" || token === "'")
-            stringDelim = token;
-        return token;
-    }
-
-    /**
-     * Pushes a token back to the stack.
-     * @param {string} token Token
-     * @returns {undefined}
-     * @inner
-     */
-    function push(token) {
-        stack.push(token);
-    }
-
-    /**
-     * Peeks for the next token.
-     * @returns {string|null} Token or `null` on eof
-     * @inner
-     */
-    function peek() {
-        if (!stack.length) {
-            var token = next();
-            if (token === null)
-                return null;
-            push(token);
-        }
-        return stack[0];
-    }
-
-    /**
-     * Skips a token.
-     * @param {string} expected Expected token
-     * @param {boolean} [optional=false] Whether the token is optional
-     * @returns {boolean} `true` when skipped, `false` if not
-     * @throws {Error} When a required token is not present
-     * @inner
-     */
-    function skip(expected, optional) {
-        var actual = peek(),
-            equals = actual === expected;
-        if (equals) {
-            next();
-            return true;
-        }
-        if (!optional)
-            throw illegal("token '" + actual + "', '" + expected + "' expected");
-        return false;
-    }
-
-    /**
-     * Gets a comment.
-     * @param {number} [trailingLine] Line number if looking for a trailing comment
-     * @returns {string|null} Comment text
-     * @inner
-     */
-    function cmnt(trailingLine) {
-        var ret = null;
-        var comment;
-        if (trailingLine === undefined) {
-            comment = comments[line - 1];
-            delete comments[line - 1];
-            if (comment && (alternateCommentMode || comment.type === "*" || comment.lineEmpty)) {
-                ret = comment.leading ? comment.text : null;
-            }
+          pos = next
+        } else if (pos <= lastBadParen) {
+          currentToken = ['(', '(', pos]
         } else {
-            /* istanbul ignore else */
-            if (lastCommentLine < trailingLine) {
-                peek();
-            }
-            comment = comments[trailingLine];
-            delete comments[trailingLine];
-            if (comment && !comment.lineEmpty && (alternateCommentMode || comment.type === "/")) {
-                ret = comment.leading ? null : comment.text;
-            }
+          next = css.indexOf(')', pos + 1)
+          content = css.slice(pos, next + 1)
+
+          if (next === -1 || RE_BAD_BRACKET.test(content)) {
+            lastBadParen = next === -1 ? length : next
+            currentToken = ['(', '(', pos]
+          } else {
+            currentToken = ['brackets', content, pos, next]
+            pos = next
+          }
         }
-        return ret;
+
+        break
+      }
+
+      case SINGLE_QUOTE:
+      case DOUBLE_QUOTE: {
+        quote = code === SINGLE_QUOTE ? "'" : '"'
+        next = pos
+        do {
+          escaped = false
+          next = css.indexOf(quote, next + 1)
+          if (next === -1) {
+            if (ignore || ignoreUnclosed) {
+              next = pos + 1
+              break
+            } else {
+              unclosed('string')
+            }
+          }
+          escapePos = next
+          while (css.charCodeAt(escapePos - 1) === BACKSLASH) {
+            escapePos -= 1
+            escaped = !escaped
+          }
+        } while (escaped)
+
+        currentToken = ['string', css.slice(pos, next + 1), pos, next]
+        pos = next
+        break
+      }
+
+      case AT: {
+        RE_AT_END.lastIndex = pos + 1
+        RE_AT_END.test(css)
+        if (RE_AT_END.lastIndex === 0) {
+          next = css.length - 1
+        } else {
+          next = RE_AT_END.lastIndex - 2
+        }
+
+        currentToken = ['at-word', css.slice(pos, next + 1), pos, next]
+
+        pos = next
+        break
+      }
+
+      case BACKSLASH: {
+        next = pos
+        escape = true
+        while (css.charCodeAt(next + 1) === BACKSLASH) {
+          next += 1
+          escape = !escape
+        }
+        code = css.charCodeAt(next + 1)
+        if (
+          escape &&
+          code !== SLASH &&
+          code !== SPACE &&
+          code !== NEWLINE &&
+          code !== TAB &&
+          code !== CR &&
+          code !== FEED
+        ) {
+          next += 1
+          if (RE_HEX_ESCAPE.test(css.charAt(next))) {
+            while (RE_HEX_ESCAPE.test(css.charAt(next + 1))) {
+              next += 1
+            }
+            if (css.charCodeAt(next + 1) === SPACE) {
+              next += 1
+            }
+          }
+        }
+
+        currentToken = ['word', css.slice(pos, next + 1), pos, next]
+
+        pos = next
+        break
+      }
+
+      default: {
+        if (code === SLASH && css.charCodeAt(pos + 1) === ASTERISK) {
+          next = css.indexOf('*/', pos + 2) + 1
+          if (next === 0) {
+            if (ignore || ignoreUnclosed) {
+              next = css.length
+            } else {
+              unclosed('comment')
+            }
+          }
+
+          currentToken = ['comment', css.slice(pos, next + 1), pos, next]
+          pos = next
+        } else {
+          RE_WORD_END.lastIndex = pos + 1
+          RE_WORD_END.test(css)
+          if (RE_WORD_END.lastIndex === 0) {
+            next = css.length - 1
+          } else {
+            next = RE_WORD_END.lastIndex - 2
+          }
+
+          currentToken = ['word', css.slice(pos, next + 1), pos, next]
+          buffer.push(currentToken)
+          pos = next
+        }
+
+        break
+      }
     }
 
-    return Object.defineProperty({
-        next: next,
-        peek: peek,
-        push: push,
-        skip: skip,
-        cmnt: cmnt
-    }, "line", {
-        get: function() { return line; }
-    });
-    /* eslint-enable callback-return */
+    pos++
+    return currentToken
+  }
+
+  function back(token) {
+    returned.push(token)
+  }
+
+  return {
+    back,
+    endOfFile,
+    nextToken,
+    position
+  }
 }

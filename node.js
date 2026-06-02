@@ -1,248 +1,449 @@
-/**
- * Module dependencies.
- */
+'use strict'
 
-var tty = require('tty');
-var util = require('util');
+let CssSyntaxError = require('./css-syntax-error')
+let Stringifier = require('./stringifier')
+let stringify = require('./stringify')
+let { isClean, my } = require('./symbols')
 
-/**
- * This is the Node.js implementation of `debug()`.
- *
- * Expose `debug()` as the module.
- */
+function cloneNode(obj, parent) {
+  let cloned = new obj.constructor()
 
-exports = module.exports = require('./debug');
-exports.init = init;
-exports.log = log;
-exports.formatArgs = formatArgs;
-exports.save = save;
-exports.load = load;
-exports.useColors = useColors;
+  for (let i in obj) {
+    if (!Object.prototype.hasOwnProperty.call(obj, i)) {
+      /* c8 ignore next 2 */
+      continue
+    }
+    if (i === 'proxyCache') continue
+    let value = obj[i]
+    let type = typeof value
 
-/**
- * Colors.
- */
-
-exports.colors = [6, 2, 3, 4, 5, 1];
-
-/**
- * Build up the default `inspectOpts` object from the environment variables.
- *
- *   $ DEBUG_COLORS=no DEBUG_DEPTH=10 DEBUG_SHOW_HIDDEN=enabled node script.js
- */
-
-exports.inspectOpts = Object.keys(process.env).filter(function (key) {
-  return /^debug_/i.test(key);
-}).reduce(function (obj, key) {
-  // camel-case
-  var prop = key
-    .substring(6)
-    .toLowerCase()
-    .replace(/_([a-z])/g, function (_, k) { return k.toUpperCase() });
-
-  // coerce string value into JS value
-  var val = process.env[key];
-  if (/^(yes|on|true|enabled)$/i.test(val)) val = true;
-  else if (/^(no|off|false|disabled)$/i.test(val)) val = false;
-  else if (val === 'null') val = null;
-  else val = Number(val);
-
-  obj[prop] = val;
-  return obj;
-}, {});
-
-/**
- * The file descriptor to write the `debug()` calls to.
- * Set the `DEBUG_FD` env variable to override with another value. i.e.:
- *
- *   $ DEBUG_FD=3 node script.js 3>debug.log
- */
-
-var fd = parseInt(process.env.DEBUG_FD, 10) || 2;
-
-if (1 !== fd && 2 !== fd) {
-  util.deprecate(function(){}, 'except for stderr(2) and stdout(1), any other usage of DEBUG_FD is deprecated. Override debug.log if you want to use a different log function (https://git.io/debug_fd)')()
-}
-
-var stream = 1 === fd ? process.stdout :
-             2 === fd ? process.stderr :
-             createWritableStdioStream(fd);
-
-/**
- * Is stdout a TTY? Colored output is enabled when `true`.
- */
-
-function useColors() {
-  return 'colors' in exports.inspectOpts
-    ? Boolean(exports.inspectOpts.colors)
-    : tty.isatty(fd);
-}
-
-/**
- * Map %o to `util.inspect()`, all on a single line.
- */
-
-exports.formatters.o = function(v) {
-  this.inspectOpts.colors = this.useColors;
-  return util.inspect(v, this.inspectOpts)
-    .split('\n').map(function(str) {
-      return str.trim()
-    }).join(' ');
-};
-
-/**
- * Map %o to `util.inspect()`, allowing multiple lines if needed.
- */
-
-exports.formatters.O = function(v) {
-  this.inspectOpts.colors = this.useColors;
-  return util.inspect(v, this.inspectOpts);
-};
-
-/**
- * Adds ANSI color escape codes if enabled.
- *
- * @api public
- */
-
-function formatArgs(args) {
-  var name = this.namespace;
-  var useColors = this.useColors;
-
-  if (useColors) {
-    var c = this.color;
-    var prefix = '  \u001b[3' + c + ';1m' + name + ' ' + '\u001b[0m';
-
-    args[0] = prefix + args[0].split('\n').join('\n' + prefix);
-    args.push('\u001b[3' + c + 'm+' + exports.humanize(this.diff) + '\u001b[0m');
-  } else {
-    args[0] = new Date().toUTCString()
-      + ' ' + name + ' ' + args[0];
+    if (i === 'parent' && type === 'object') {
+      if (parent) cloned[i] = parent
+    } else if (i === 'source') {
+      cloned[i] = value
+    } else if (Array.isArray(value)) {
+      cloned[i] = value.map(j => cloneNode(j, cloned))
+    } else {
+      if (type === 'object' && value !== null) value = cloneNode(value)
+      cloned[i] = value
+    }
   }
+
+  return cloned
 }
 
-/**
- * Invokes `util.format()` with the specified arguments and writes to `stream`.
- */
-
-function log() {
-  return stream.write(util.format.apply(util, arguments) + '\n');
-}
-
-/**
- * Save `namespaces`.
- *
- * @param {String} namespaces
- * @api private
- */
-
-function save(namespaces) {
-  if (null == namespaces) {
-    // If you set a process.env field to null or undefined, it gets cast to the
-    // string 'null' or 'undefined'. Just delete instead.
-    delete process.env.DEBUG;
-  } else {
-    process.env.DEBUG = namespaces;
+function sourceOffset(inputCSS, position) {
+  // Not all custom syntaxes support `offset` in `source.start` and `source.end`
+  if (position && typeof position.offset !== 'undefined') {
+    return position.offset
   }
+
+  let column = 1
+  let line = 1
+  let offset = 0
+
+  for (let i = 0; i < inputCSS.length; i++) {
+    if (line === position.line && column === position.column) {
+      offset = i
+      break
+    }
+
+    if (inputCSS[i] === '\n') {
+      column = 1
+      line += 1
+    } else {
+      column += 1
+    }
+  }
+
+  return offset
 }
 
-/**
- * Load `namespaces`.
- *
- * @return {String} returns the previously persisted debug modes
- * @api private
- */
+class Node {
+  get proxyOf() {
+    return this
+  }
 
-function load() {
-  return process.env.DEBUG;
-}
+  constructor(defaults = {}) {
+    this.raws = {}
+    this[isClean] = false
+    this[my] = true
 
-/**
- * Copied from `node/src/node.js`.
- *
- * XXX: It's lame that node doesn't expose this API out-of-the-box. It also
- * relies on the undocumented `tty_wrap.guessHandleType()` which is also lame.
- */
-
-function createWritableStdioStream (fd) {
-  var stream;
-  var tty_wrap = process.binding('tty_wrap');
-
-  // Note stream._type is used for test-module-load-list.js
-
-  switch (tty_wrap.guessHandleType(fd)) {
-    case 'TTY':
-      stream = new tty.WriteStream(fd);
-      stream._type = 'tty';
-
-      // Hack to have stream not keep the event loop alive.
-      // See https://github.com/joyent/node/issues/1726
-      if (stream._handle && stream._handle.unref) {
-        stream._handle.unref();
+    for (let name in defaults) {
+      if (name === 'nodes') {
+        this.nodes = []
+        for (let node of defaults[name]) {
+          if (typeof node.clone === 'function') {
+            this.append(node.clone())
+          } else {
+            this.append(node)
+          }
+        }
+      } else {
+        this[name] = defaults[name]
       }
-      break;
+    }
+  }
 
-    case 'FILE':
-      var fs = require('fs');
-      stream = new fs.SyncWriteStream(fd, { autoClose: false });
-      stream._type = 'fs';
-      break;
+  addToError(error) {
+    error.postcssNode = this
+    if (error.stack && this.source && /\n\s{4}at /.test(error.stack)) {
+      let s = this.source
+      error.stack = error.stack.replace(
+        /\n\s{4}at /,
+        `$&${s.input.from}:${s.start.line}:${s.start.column}$&`
+      )
+    }
+    return error
+  }
 
-    case 'PIPE':
-    case 'TCP':
-      var net = require('net');
-      stream = new net.Socket({
-        fd: fd,
-        readable: false,
-        writable: true
-      });
+  after(add) {
+    this.parent.insertAfter(this, add)
+    return this
+  }
 
-      // FIXME Should probably have an option in net.Socket to create a
-      // stream from an existing fd which is writable only. But for now
-      // we'll just add this hack and set the `readable` member to false.
-      // Test: ./node test/fixtures/echo.js < /etc/passwd
-      stream.readable = false;
-      stream.read = null;
-      stream._type = 'pipe';
+  assign(overrides = {}) {
+    for (let name in overrides) {
+      this[name] = overrides[name]
+    }
+    return this
+  }
 
-      // FIXME Hack to have stream not keep the event loop alive.
-      // See https://github.com/joyent/node/issues/1726
-      if (stream._handle && stream._handle.unref) {
-        stream._handle.unref();
+  before(add) {
+    this.parent.insertBefore(this, add)
+    return this
+  }
+
+  cleanRaws(keepBetween) {
+    delete this.raws.before
+    delete this.raws.after
+    if (!keepBetween) delete this.raws.between
+  }
+
+  clone(overrides = {}) {
+    let cloned = cloneNode(this)
+    for (let name in overrides) {
+      cloned[name] = overrides[name]
+    }
+    return cloned
+  }
+
+  cloneAfter(overrides = {}) {
+    let cloned = this.clone(overrides)
+    this.parent.insertAfter(this, cloned)
+    return cloned
+  }
+
+  cloneBefore(overrides = {}) {
+    let cloned = this.clone(overrides)
+    this.parent.insertBefore(this, cloned)
+    return cloned
+  }
+
+  error(message, opts = {}) {
+    if (this.source) {
+      let { end, start } = this.rangeBy(opts)
+      return this.source.input.error(
+        message,
+        { column: start.column, line: start.line },
+        { column: end.column, line: end.line },
+        opts
+      )
+    }
+    return new CssSyntaxError(message)
+  }
+
+  getProxyProcessor() {
+    return {
+      get(node, prop) {
+        if (prop === 'proxyOf') {
+          return node
+        } else if (prop === 'root') {
+          return () => node.root().toProxy()
+        } else {
+          return node[prop]
+        }
+      },
+
+      set(node, prop, value) {
+        if (node[prop] === value) return true
+        node[prop] = value
+        if (
+          prop === 'prop' ||
+          prop === 'value' ||
+          prop === 'name' ||
+          prop === 'params' ||
+          prop === 'important' ||
+          /* c8 ignore next */
+          prop === 'text'
+        ) {
+          node.markDirty()
+        }
+        return true
       }
-      break;
-
-    default:
-      // Probably an error on in uv_guess_handle()
-      throw new Error('Implement me. Unknown stream file type!');
+    }
   }
 
-  // For supporting legacy API we put the FD here.
-  stream.fd = fd;
+  /* c8 ignore next 3 */
+  markClean() {
+    this[isClean] = true
+  }
 
-  stream._isStdio = true;
+  markDirty() {
+    if (this[isClean]) {
+      this[isClean] = false
+      let next = this
+      while ((next = next.parent)) {
+        next[isClean] = false
+      }
+    }
+  }
 
-  return stream;
-}
+  next() {
+    if (!this.parent) return undefined
+    let index = this.parent.index(this)
+    return this.parent.nodes[index + 1]
+  }
 
-/**
- * Init logic for `debug` instances.
- *
- * Create a new `inspectOpts` object in case `useColors` is set
- * differently for a particular `debug` instance.
- */
+  positionBy(opts = {}) {
+    let pos = this.source.start
+    if (opts.index) {
+      pos = this.positionInside(opts.index)
+    } else if (opts.word) {
+      let inputString =
+        'document' in this.source.input
+          ? this.source.input.document
+          : this.source.input.css
+      let stringRepresentation = inputString.slice(
+        sourceOffset(inputString, this.source.start),
+        sourceOffset(inputString, this.source.end)
+      )
+      let index = stringRepresentation.indexOf(opts.word)
+      if (index !== -1) pos = this.positionInside(index)
+    }
+    return pos
+  }
 
-function init (debug) {
-  debug.inspectOpts = {};
+  positionInside(index) {
+    let column = this.source.start.column
+    let line = this.source.start.line
+    let inputString =
+      'document' in this.source.input
+        ? this.source.input.document
+        : this.source.input.css
+    let offset = sourceOffset(inputString, this.source.start)
+    let end = offset + index
 
-  var keys = Object.keys(exports.inspectOpts);
-  for (var i = 0; i < keys.length; i++) {
-    debug.inspectOpts[keys[i]] = exports.inspectOpts[keys[i]];
+    for (let i = offset; i < end; i++) {
+      if (inputString[i] === '\n') {
+        column = 1
+        line += 1
+      } else {
+        column += 1
+      }
+    }
+
+    return { column, line, offset: end }
+  }
+
+  prev() {
+    if (!this.parent) return undefined
+    let index = this.parent.index(this)
+    return this.parent.nodes[index - 1]
+  }
+
+  rangeBy(opts = {}) {
+    let inputString =
+      'document' in this.source.input
+        ? this.source.input.document
+        : this.source.input.css
+    let start = {
+      column: this.source.start.column,
+      line: this.source.start.line,
+      offset: sourceOffset(inputString, this.source.start)
+    }
+    let end = this.source.end
+      ? {
+          column: this.source.end.column + 1,
+          line: this.source.end.line,
+          offset:
+            typeof this.source.end.offset === 'number'
+              ? // `source.end.offset` is exclusive, so we don't need to add 1
+                this.source.end.offset
+              : // Since line/column in this.source.end is inclusive,
+                // the `sourceOffset(... , this.source.end)` returns an inclusive offset.
+                // So, we add 1 to convert it to exclusive.
+                sourceOffset(inputString, this.source.end) + 1
+        }
+      : {
+          column: start.column + 1,
+          line: start.line,
+          offset: start.offset + 1
+        }
+
+    if (opts.word) {
+      let stringRepresentation = inputString.slice(
+        sourceOffset(inputString, this.source.start),
+        sourceOffset(inputString, this.source.end)
+      )
+      let index = stringRepresentation.indexOf(opts.word)
+      if (index !== -1) {
+        start = this.positionInside(index)
+        end = this.positionInside(index + opts.word.length)
+      }
+    } else {
+      if (opts.start) {
+        start = {
+          column: opts.start.column,
+          line: opts.start.line,
+          offset: sourceOffset(inputString, opts.start)
+        }
+      } else if (opts.index) {
+        start = this.positionInside(opts.index)
+      }
+
+      if (opts.end) {
+        end = {
+          column: opts.end.column,
+          line: opts.end.line,
+          offset: sourceOffset(inputString, opts.end)
+        }
+      } else if (typeof opts.endIndex === 'number') {
+        end = this.positionInside(opts.endIndex)
+      } else if (opts.index) {
+        end = this.positionInside(opts.index + 1)
+      }
+    }
+
+    if (
+      end.line < start.line ||
+      (end.line === start.line && end.column <= start.column)
+    ) {
+      end = {
+        column: start.column + 1,
+        line: start.line,
+        offset: start.offset + 1
+      }
+    }
+
+    return { end, start }
+  }
+
+  raw(prop, defaultType) {
+    let str = new Stringifier()
+    return str.raw(this, prop, defaultType)
+  }
+
+  remove() {
+    if (this.parent) {
+      this.parent.removeChild(this)
+    }
+    this.parent = undefined
+    return this
+  }
+
+  replaceWith(...nodes) {
+    if (this.parent) {
+      let bookmark = this
+      let foundSelf = false
+      for (let node of nodes) {
+        if (node === this) {
+          foundSelf = true
+        } else if (foundSelf) {
+          this.parent.insertAfter(bookmark, node)
+          bookmark = node
+        } else {
+          this.parent.insertBefore(bookmark, node)
+        }
+      }
+
+      if (!foundSelf) {
+        this.remove()
+      }
+    }
+
+    return this
+  }
+
+  root() {
+    let result = this
+    while (result.parent && result.parent.type !== 'document') {
+      result = result.parent
+    }
+    return result
+  }
+
+  toJSON(_, inputs) {
+    let fixed = {}
+    let emitInputs = inputs == null
+    inputs = inputs || new Map()
+    let inputsNextIndex = 0
+
+    for (let name in this) {
+      if (!Object.prototype.hasOwnProperty.call(this, name)) {
+        /* c8 ignore next 2 */
+        continue
+      }
+      if (name === 'parent' || name === 'proxyCache') continue
+      let value = this[name]
+
+      if (Array.isArray(value)) {
+        fixed[name] = value.map(i => {
+          if (typeof i === 'object' && i.toJSON) {
+            return i.toJSON(null, inputs)
+          } else {
+            return i
+          }
+        })
+      } else if (typeof value === 'object' && value.toJSON) {
+        fixed[name] = value.toJSON(null, inputs)
+      } else if (name === 'source') {
+        if (value == null) continue
+        let inputId = inputs.get(value.input)
+        if (inputId == null) {
+          inputId = inputsNextIndex
+          inputs.set(value.input, inputsNextIndex)
+          inputsNextIndex++
+        }
+        fixed[name] = {
+          end: value.end,
+          inputId,
+          start: value.start
+        }
+      } else {
+        fixed[name] = value
+      }
+    }
+
+    if (emitInputs) {
+      fixed.inputs = [...inputs.keys()].map(input => input.toJSON())
+    }
+
+    return fixed
+  }
+
+  toProxy() {
+    if (!this.proxyCache) {
+      this.proxyCache = new Proxy(this, this.getProxyProcessor())
+    }
+    return this.proxyCache
+  }
+
+  toString(stringifier = stringify) {
+    if (stringifier.stringify) stringifier = stringifier.stringify
+    let result = ''
+    stringifier(this, i => {
+      result += i
+    })
+    return result
+  }
+
+  warn(result, text, opts = {}) {
+    let data = { node: this }
+    for (let i in opts) data[i] = opts[i]
+    return result.warn(text, data)
   }
 }
 
-/**
- * Enable namespaces listed in `process.env.DEBUG` initially.
- */
-
-exports.enable(load());
+module.exports = Node
+Node.default = Node
