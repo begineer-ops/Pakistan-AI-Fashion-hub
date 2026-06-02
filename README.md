@@ -1,90 +1,50 @@
-# mime
+# math-intrinsics <sup>[![Version Badge][npm-version-svg]][package-url]</sup>
 
-Comprehensive MIME type mapping API based on mime-db module.
+[![github actions][actions-image]][actions-url]
+[![coverage][codecov-image]][codecov-url]
+[![License][license-image]][license-url]
+[![Downloads][downloads-image]][downloads-url]
 
-## Install
+[![npm badge][npm-badge-png]][package-url]
 
-Install with [npm](http://github.com/isaacs/npm):
+ES Math-related intrinsics and helpers, robustly cached.
 
-    npm install mime
+ - `abs`
+ - `floor`
+ - `isFinite`
+ - `isInteger`
+ - `isNaN`
+ - `isNegativeZero`
+ - `max`
+ - `min`
+ - `mod`
+ - `pow`
+ - `round`
+ - `sign`
+ - `constants/maxArrayLength`
+ - `constants/maxSafeInteger`
+ - `constants/maxValue`
 
-## Contributing / Testing
 
-    npm run test
+## Tests
+Simply clone the repo, `npm install`, and run `npm test`
 
-## Command Line
+## Security
 
-    mime [path_string]
+Please email [@ljharb](https://github.com/ljharb) or see https://tidelift.com/security if you have a potential security vulnerability to report.
 
-E.g.
-
-    > mime scripts/jquery.js
-    application/javascript
-
-## API - Queries
-
-### mime.lookup(path)
-Get the mime type associated with a file, if no mime type is found `application/octet-stream` is returned. Performs a case-insensitive lookup using the extension in `path` (the substring after the last '/' or '.').  E.g.
-
-```js
-var mime = require('mime');
-
-mime.lookup('/path/to/file.txt');         // => 'text/plain'
-mime.lookup('file.txt');                  // => 'text/plain'
-mime.lookup('.TXT');                      // => 'text/plain'
-mime.lookup('htm');                       // => 'text/html'
-```
-
-### mime.default_type
-Sets the mime type returned when `mime.lookup` fails to find the extension searched for. (Default is `application/octet-stream`.)
-
-### mime.extension(type)
-Get the default extension for `type`
-
-```js
-mime.extension('text/html');                 // => 'html'
-mime.extension('application/octet-stream');  // => 'bin'
-```
-
-### mime.charsets.lookup()
-
-Map mime-type to charset
-
-```js
-mime.charsets.lookup('text/plain');        // => 'UTF-8'
-```
-
-(The logic for charset lookups is pretty rudimentary.  Feel free to suggest improvements.)
-
-## API - Defining Custom Types
-
-Custom type mappings can be added on a per-project basis via the following APIs.
-
-### mime.define()
-
-Add custom mime/extension mappings
-
-```js
-mime.define({
-    'text/x-some-format': ['x-sf', 'x-sft', 'x-sfml'],
-    'application/x-my-type': ['x-mt', 'x-mtt'],
-    // etc ...
-});
-
-mime.lookup('x-sft');                 // => 'text/x-some-format'
-```
-
-The first entry in the extensions array is returned by `mime.extension()`. E.g.
-
-```js
-mime.extension('text/x-some-format'); // => 'x-sf'
-```
-
-### mime.load(filepath)
-
-Load mappings from an Apache ".types" format file
-
-```js
-mime.load('./my_project.types');
-```
-The .types file format is simple -  See the `types` dir for examples.
+[package-url]: https://npmjs.org/package/math-intrinsics
+[npm-version-svg]: https://versionbadg.es/es-shims/math-intrinsics.svg
+[deps-svg]: https://david-dm.org/es-shims/math-intrinsics.svg
+[deps-url]: https://david-dm.org/es-shims/math-intrinsics
+[dev-deps-svg]: https://david-dm.org/es-shims/math-intrinsics/dev-status.svg
+[dev-deps-url]: https://david-dm.org/es-shims/math-intrinsics#info=devDependencies
+[npm-badge-png]: https://nodei.co/npm/math-intrinsics.png?downloads=true&stars=true
+[license-image]: https://img.shields.io/npm/l/math-intrinsics.svg
+[license-url]: LICENSE
+[downloads-image]: https://img.shields.io/npm/dm/es-object.svg
+[downloads-url]: https://npm-stat.com/charts.html?package=math-intrinsics
+[codecov-image]: https://codecov.io/gh/es-shims/math-intrinsics/branch/main/graphs/badge.svg
+[codecov-url]: https://app.codecov.io/gh/es-shims/math-intrinsics/
+[actions-image]: https://img.shields.io/endpoint?url=https://github-actions-badge-u3jn4tfpocch.runkit.sh/es-shims/math-intrinsics
+[actions-url]: https://github.com/es-shims/math-intrinsics/actions
