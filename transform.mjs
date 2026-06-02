@@ -1,38 +1,15 @@
-import { alpha, scale } from '../numbers/index.mjs';
-import { px, progressPercentage, degrees } from '../numbers/units.mjs';
+import { interpolate } from './interpolate.mjs';
 
-const transformValueTypes = {
-    rotate: degrees,
-    /**
-     * Internal channel for `transition.path` orientToPath. Composed onto
-     * `rotate` at the transform-build sites so the user's `rotate` is
-     * never read or overwritten. Not part of `transformPropOrder`.
-     */
-    pathRotation: degrees,
-    rotateX: degrees,
-    rotateY: degrees,
-    rotateZ: degrees,
-    scale,
-    scaleX: scale,
-    scaleY: scale,
-    scaleZ: scale,
-    skew: degrees,
-    skewX: degrees,
-    skewY: degrees,
-    distance: px,
-    translateX: px,
-    translateY: px,
-    translateZ: px,
-    x: px,
-    y: px,
-    z: px,
-    perspective: px,
-    transformPerspective: px,
-    opacity: alpha,
-    originX: progressPercentage,
-    originY: progressPercentage,
-    originZ: px,
-};
+function transform(...args) {
+    const useImmediate = !Array.isArray(args[0]);
+    const argOffset = useImmediate ? 0 : -1;
+    const inputValue = args[0 + argOffset];
+    const inputRange = args[1 + argOffset];
+    const outputRange = args[2 + argOffset];
+    const options = args[3 + argOffset];
+    const interpolator = interpolate(inputRange, outputRange, options);
+    return useImmediate ? interpolator(inputValue) : interpolator;
+}
 
-export { transformValueTypes };
+export { transform };
 //# sourceMappingURL=transform.mjs.map

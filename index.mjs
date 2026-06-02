@@ -1,33 +1,20 @@
-import { hex } from './hex.mjs';
-import { hsla } from './hsla.mjs';
-import { rgba } from './rgba.mjs';
+import { hasReducedMotionListener, prefersReducedMotion } from './state.mjs';
 
-const color = {
-    test: (v) => rgba.test(v) || hex.test(v) || hsla.test(v),
-    parse: (v) => {
-        if (rgba.test(v)) {
-            return rgba.parse(v);
-        }
-        else if (hsla.test(v)) {
-            return hsla.parse(v);
-        }
-        else {
-            return hex.parse(v);
-        }
-    },
-    transform: (v) => {
-        return typeof v === "string"
-            ? v
-            : v.hasOwnProperty("red")
-                ? rgba.transform(v)
-                : hsla.transform(v);
-    },
-    getAnimatableNone: (v) => {
-        const parsed = color.parse(v);
-        parsed.alpha = 0;
-        return color.transform(parsed);
-    },
-};
+const isBrowser = typeof window !== "undefined";
+function initPrefersReducedMotion() {
+    hasReducedMotionListener.current = true;
+    if (!isBrowser)
+        return;
+    if (window.matchMedia) {
+        const motionMediaQuery = window.matchMedia("(prefers-reduced-motion)");
+        const setReducedMotionPreferences = () => (prefersReducedMotion.current = motionMediaQuery.matches);
+        motionMediaQuery.addEventListener("change", setReducedMotionPreferences);
+        setReducedMotionPreferences();
+    }
+    else {
+        prefersReducedMotion.current = false;
+    }
+}
 
-export { color };
+export { hasReducedMotionListener, initPrefersReducedMotion, prefersReducedMotion };
 //# sourceMappingURL=index.mjs.map

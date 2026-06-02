@@ -1,12 +1,10 @@
-/*#__NO_SIDE_EFFECTS__*/
-function memo(callback) {
-    let result;
-    return () => {
-        if (result === undefined)
-            result = callback();
-        return result;
-    };
+import { memo } from 'motion-utils';
+import { supportsFlags } from './flags.mjs';
+
+function memoSupports(callback, supportsFlag) {
+    const memoized = memo(callback);
+    return () => supportsFlags[supportsFlag] ?? memoized();
 }
 
-export { memo };
+export { memoSupports };
 //# sourceMappingURL=memo.mjs.map

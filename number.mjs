@@ -1,71 +1,27 @@
-import { int } from '../int.mjs';
-import { alpha } from '../numbers/index.mjs';
-import { px } from '../numbers/units.mjs';
-import { transformValueTypes } from './transform.mjs';
+/*
+  Value in range from progress
 
-const numberValueTypes = {
-    // Border props
-    borderWidth: px,
-    borderTopWidth: px,
-    borderRightWidth: px,
-    borderBottomWidth: px,
-    borderLeftWidth: px,
-    borderRadius: px,
-    borderTopLeftRadius: px,
-    borderTopRightRadius: px,
-    borderBottomRightRadius: px,
-    borderBottomLeftRadius: px,
-    // Positioning props
-    width: px,
-    maxWidth: px,
-    height: px,
-    maxHeight: px,
-    top: px,
-    right: px,
-    bottom: px,
-    left: px,
-    inset: px,
-    insetBlock: px,
-    insetBlockStart: px,
-    insetBlockEnd: px,
-    insetInline: px,
-    insetInlineStart: px,
-    insetInlineEnd: px,
-    // Spacing props
-    padding: px,
-    paddingTop: px,
-    paddingRight: px,
-    paddingBottom: px,
-    paddingLeft: px,
-    paddingBlock: px,
-    paddingBlockStart: px,
-    paddingBlockEnd: px,
-    paddingInline: px,
-    paddingInlineStart: px,
-    paddingInlineEnd: px,
-    margin: px,
-    marginTop: px,
-    marginRight: px,
-    marginBottom: px,
-    marginLeft: px,
-    marginBlock: px,
-    marginBlockStart: px,
-    marginBlockEnd: px,
-    marginInline: px,
-    marginInlineStart: px,
-    marginInlineEnd: px,
-    // Typography
-    fontSize: px,
-    // Misc
-    backgroundPositionX: px,
-    backgroundPositionY: px,
-    ...transformValueTypes,
-    zIndex: int,
-    // SVG
-    fillOpacity: alpha,
-    strokeOpacity: alpha,
-    numOctaves: int,
+  Given a lower limit and an upper limit, we return the value within
+  that range as expressed by progress (usually a number from 0 to 1)
+
+  So progress = 0.5 would change
+
+  from -------- to
+
+  to
+
+  from ---- to
+
+  E.g. from = 10, to = 20, progress = 0.5 => 15
+
+  @param [number]: Lower limit of range
+  @param [number]: Upper limit of range
+  @param [number]: The progress between lower and upper limits expressed 0-1
+  @return [number]: Value as calculated from progress within range (not limited within range)
+*/
+const mixNumber = (from, to, progress) => {
+    return from + (to - from) * progress;
 };
 
-export { numberValueTypes };
+export { mixNumber };
 //# sourceMappingURL=number.mjs.map
