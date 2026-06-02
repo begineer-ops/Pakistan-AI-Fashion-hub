@@ -1,6 +1,4 @@
-// Does this device prefer reduced motion? Returns `null` server-side.
-const prefersReducedMotion = { current: null };
-const hasReducedMotionListener = { current: false };
+const isPressing = new WeakSet();
 
-export { hasReducedMotionListener, prefersReducedMotion };
+export { isPressing };
 //# sourceMappingURL=state.mjs.map

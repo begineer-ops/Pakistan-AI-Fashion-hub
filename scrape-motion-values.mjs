@@ -1,16 +1,18 @@
 import { isMotionValue } from '../../../value/utils/is-motion-value.mjs';
-import { transformPropOrder } from '../../utils/keys-transform.mjs';
-import { scrapeMotionValuesFromProps as scrapeMotionValuesFromProps$1 } from '../../html/utils/scrape-motion-values.mjs';
+import { isForcedMotionValue } from '../../utils/is-forced-motion-value.mjs';
 
 function scrapeMotionValuesFromProps(props, prevProps, visualElement) {
-    const newValues = scrapeMotionValuesFromProps$1(props, prevProps, visualElement);
-    for (const key in props) {
-        if (isMotionValue(props[key]) ||
-            isMotionValue(prevProps[key])) {
-            const targetKey = transformPropOrder.indexOf(key) !== -1
-                ? "attr" + key.charAt(0).toUpperCase() + key.substring(1)
-                : key;
-            newValues[targetKey] = props[key];
+    const style = props.style;
+    const prevStyle = prevProps?.style;
+    const newValues = {};
+    if (!style)
+        return newValues;
+    for (const key in style) {
+        if (isMotionValue(style[key]) ||
+            (prevStyle && isMotionValue(prevStyle[key])) ||
+            isForcedMotionValue(key, props) ||
+            visualElement?.getValue(key)?.liveStyle !== undefined) {
+            newValues[key] = style[key];
         }
     }
     return newValues;

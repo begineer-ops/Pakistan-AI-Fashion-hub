@@ -1,30 +1,32 @@
-import { floatRegex } from '../utils/float-regex.mjs';
-import { isNullish } from '../utils/is-nullish.mjs';
-import { singleColorRegex } from '../utils/single-color-regex.mjs';
+import { calcLength } from './delta-calc.mjs';
 
-/**
- * Returns true if the provided string is a color, ie rgba(0,0,0,0) or #000,
- * but false if a number or multiple colors
- */
-const isColorString = (type, testProp) => (v) => {
-    return Boolean((typeof v === "string" &&
-        singleColorRegex.test(v) &&
-        v.startsWith(type)) ||
-        (testProp &&
-            !isNullish(v) &&
-            Object.prototype.hasOwnProperty.call(v, testProp)));
-};
-const splitColor = (aName, bName, cName) => (v) => {
-    if (typeof v !== "string")
-        return v;
-    const [a, b, c, alpha] = v.match(floatRegex);
-    return {
-        [aName]: parseFloat(a),
-        [bName]: parseFloat(b),
-        [cName]: parseFloat(c),
-        alpha: alpha !== undefined ? parseFloat(alpha) : 1,
-    };
-};
+function isAxisDeltaZero(delta) {
+    return delta.translate === 0 && delta.scale === 1;
+}
+function isDeltaZero(delta) {
+    return isAxisDeltaZero(delta.x) && isAxisDeltaZero(delta.y);
+}
+function axisEquals(a, b) {
+    return a.min === b.min && a.max === b.max;
+}
+function boxEquals(a, b) {
+    return axisEquals(a.x, b.x) && axisEquals(a.y, b.y);
+}
+function axisEqualsRounded(a, b) {
+    return (Math.round(a.min) === Math.round(b.min) &&
+        Math.round(a.max) === Math.round(b.max));
+}
+function boxEqualsRounded(a, b) {
+    return axisEqualsRounded(a.x, b.x) && axisEqualsRounded(a.y, b.y);
+}
+function aspectRatio(box) {
+    return calcLength(box.x) / calcLength(box.y);
+}
+function axisDeltaEquals(a, b) {
+    return (a.translate === b.translate &&
+        a.scale === b.scale &&
+        a.originPoint === b.originPoint);
+}
 
-export { isColorString, splitColor };
+export { aspectRatio, axisDeltaEquals, axisEquals, axisEqualsRounded, boxEquals, boxEqualsRounded, isDeltaZero };
 //# sourceMappingURL=utils.mjs.map

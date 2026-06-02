@@ -1,13 +1,18 @@
-import { camelToDash } from '../../dom/utils/camel-to-dash.mjs';
-import { renderHTML } from '../../html/utils/render.mjs';
-import { camelCaseAttributes } from './camel-case-attrs.mjs';
-
-function renderSVG(element, renderState, _styleProp, projection) {
-    renderHTML(element, renderState, undefined, projection);
-    for (const key in renderState.attrs) {
-        element.setAttribute(!camelCaseAttributes.has(key) ? camelToDash(key) : key, renderState.attrs[key]);
+function renderHTML(element, { style, vars }, styleProp, projection) {
+    const elementStyle = element.style;
+    let key;
+    for (key in style) {
+        // CSSStyleDeclaration has [index: number]: string; in the types, so we use that as key type.
+        elementStyle[key] = style[key];
+    }
+    // Write projection styles directly to element style
+    projection?.applyProjectionStyles(elementStyle, styleProp);
+    for (key in vars) {
+        // Loop over any CSS variables and assign those.
+        // They can only be assigned using `setProperty`.
+        elementStyle.setProperty(key, vars[key]);
     }
 }
 
-export { renderSVG };
+export { renderHTML };
 //# sourceMappingURL=render.mjs.map
