@@ -2,13 +2,13 @@
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
-var debug = require('framer-motion/debug');
+var client = require('framer-motion/client');
 
 
 
-Object.keys(debug).forEach(function (k) {
+Object.keys(client).forEach(function (k) {
 	if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
 		enumerable: true,
-		get: function () { return debug[k]; }
+		get: function () { return client[k]; }
 	});
 });

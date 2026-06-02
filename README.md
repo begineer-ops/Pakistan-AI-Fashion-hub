@@ -1,39 +1,90 @@
-# Nano ID
+# mime
 
-<img src="https://ai.github.io/nanoid/logo.svg" align="right"
-     alt="Nano ID logo by Anton Lovchikov" width="180" height="94">
+Comprehensive MIME type mapping API based on mime-db module.
 
-**English** | [Русский](./README.ru.md) | [简体中文](./README.zh-CN.md) | [Bahasa Indonesia](./README.id-ID.md)
+## Install
 
-A tiny, secure, URL-friendly, unique string ID generator for JavaScript.
+Install with [npm](http://github.com/isaacs/npm):
 
-> “An amazing level of senseless perfectionism,
-> which is simply impossible not to respect.”
+    npm install mime
 
-* **Small.** 130 bytes (minified and gzipped). No dependencies.
-  [Size Limit] controls the size.
-* **Fast.** It is 2 times faster than UUID.
-* **Safe.** It uses hardware random generator. Can be used in clusters.
-* **Short IDs.** It uses a larger alphabet than UUID (`A-Za-z0-9_-`).
-  So ID size was reduced from 36 to 21 symbols.
-* **Portable.** Nano ID was ported
-  to [20 programming languages](#other-programming-languages).
+## Contributing / Testing
+
+    npm run test
+
+## Command Line
+
+    mime [path_string]
+
+E.g.
+
+    > mime scripts/jquery.js
+    application/javascript
+
+## API - Queries
+
+### mime.lookup(path)
+Get the mime type associated with a file, if no mime type is found `application/octet-stream` is returned. Performs a case-insensitive lookup using the extension in `path` (the substring after the last '/' or '.').  E.g.
 
 ```js
-import { nanoid } from 'nanoid'
-model.id = nanoid() //=> "V1StGXR8_Z5jdHi6B-myT"
+var mime = require('mime');
+
+mime.lookup('/path/to/file.txt');         // => 'text/plain'
+mime.lookup('file.txt');                  // => 'text/plain'
+mime.lookup('.TXT');                      // => 'text/plain'
+mime.lookup('htm');                       // => 'text/html'
 ```
 
-Supports modern browsers, IE [with Babel], Node.js and React Native.
+### mime.default_type
+Sets the mime type returned when `mime.lookup` fails to find the extension searched for. (Default is `application/octet-stream`.)
 
-[online tool]: https://gitpod.io/#https://github.com/ai/nanoid/
-[with Babel]:  https://developer.epages.com/blog/coding/how-to-transpile-node-modules-with-babel-and-webpack-in-a-monorepo/
-[Size Limit]:  https://github.com/ai/size-limit
+### mime.extension(type)
+Get the default extension for `type`
 
-<a href="https://evilmartians.com/?utm_source=nanoid">
-  <img src="https://evilmartians.com/badges/sponsored-by-evil-martians.svg"
-       alt="Sponsored by Evil Martians" width="236" height="54">
-</a>
+```js
+mime.extension('text/html');                 // => 'html'
+mime.extension('application/octet-stream');  // => 'bin'
+```
 
-## Docs
-Read full docs **[here](https://github.com/ai/nanoid#readme)**.
+### mime.charsets.lookup()
+
+Map mime-type to charset
+
+```js
+mime.charsets.lookup('text/plain');        // => 'UTF-8'
+```
+
+(The logic for charset lookups is pretty rudimentary.  Feel free to suggest improvements.)
+
+## API - Defining Custom Types
+
+Custom type mappings can be added on a per-project basis via the following APIs.
+
+### mime.define()
+
+Add custom mime/extension mappings
+
+```js
+mime.define({
+    'text/x-some-format': ['x-sf', 'x-sft', 'x-sfml'],
+    'application/x-my-type': ['x-mt', 'x-mtt'],
+    // etc ...
+});
+
+mime.lookup('x-sft');                 // => 'text/x-some-format'
+```
+
+The first entry in the extensions array is returned by `mime.extension()`. E.g.
+
+```js
+mime.extension('text/x-some-format'); // => 'x-sf'
+```
+
+### mime.load(filepath)
+
+Load mappings from an Apache ".types" format file
+
+```js
+mime.load('./my_project.types');
+```
+The .types file format is simple -  See the `types` dir for examples.

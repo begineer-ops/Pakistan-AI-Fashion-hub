@@ -1,40 +1,44 @@
 {
-    "name": "motion-dom",
-    "version": "12.40.0",
-    "author": "Matt Perry",
-    "license": "MIT",
-    "repository": "https://github.com/motiondivision/motion",
-    "main": "./dist/cjs/index.js",
-    "types": "./dist/index.d.ts",
-    "module": "./dist/es/index.mjs",
-    "sideEffects": false,
-    "exports": {
-        ".": {
-            "types": "./dist/index.d.ts",
-            "require": "./dist/cjs/index.js",
-            "import": "./dist/es/index.mjs",
-            "default": "./dist/cjs/index.js"
-        }
-    },
-    "dependencies": {
-        "motion-utils": "^12.39.0"
-    },
-    "scripts": {
-        "clean": "rm -rf types dist lib",
-        "build": "yarn clean && tsc -p . && rollup -c && node ./scripts/check-bundle.js",
-        "dev": "concurrently -c blue,red -n tsc,rollup --kill-others \"tsc --watch -p . --preserveWatchOutput\" \"rollup --config --watch --no-watch.clearScreen\"",
-        "test": "jest --config jest.config.json --max-workers=2",
-        "measure": "rollup -c ./rollup.size.config.mjs"
-    },
-    "bundlesize": [
-        {
-            "path": "./dist/size-rollup-style-effect.js",
-            "maxSize": "2.9 kB"
-        },
-        {
-            "path": "./dist/size-rollup-motion-value.js",
-            "maxSize": "1.8 kB"
-        }
-    ],
-    "gitHead": "38ebb9480e5b25a51e09e2ec866c101d01d82c60"
+  "author": {
+    "name": "Robert Kieffer",
+    "url": "http://github.com/broofa",
+    "email": "robert@broofa.com"
+  },
+  "bin": {
+    "mime": "cli.js"
+  },
+  "engines": {
+    "node": ">=4"
+  },
+  "contributors": [
+    {
+      "name": "Benjamin Thomas",
+      "url": "http://github.com/bentomas",
+      "email": "benjamin@benjaminthomas.org"
+    }
+  ],
+  "description": "A comprehensive library for mime-type mapping",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {
+    "github-release-notes": "0.13.1",
+    "mime-db": "1.31.0",
+    "mime-score": "1.1.0"
+  },
+  "scripts": {
+    "prepare": "node src/build.js",
+    "changelog": "gren changelog --tags=all --generate --override",
+    "test": "node src/test.js"
+  },
+  "keywords": [
+    "util",
+    "mime"
+  ],
+  "main": "mime.js",
+  "name": "mime",
+  "repository": {
+    "url": "https://github.com/broofa/node-mime",
+    "type": "git"
+  },
+  "version": "1.6.0"
 }

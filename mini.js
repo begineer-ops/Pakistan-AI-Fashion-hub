@@ -2,13 +2,13 @@
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
-var debug = require('framer-motion/debug');
+var mini = require('framer-motion/dom/mini');
 
 
 
-Object.keys(debug).forEach(function (k) {
+Object.keys(mini).forEach(function (k) {
 	if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
 		enumerable: true,
-		get: function () { return debug[k]; }
+		get: function () { return mini[k]; }
 	});
 });
