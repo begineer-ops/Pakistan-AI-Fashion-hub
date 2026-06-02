@@ -1,70 +1,32 @@
-import tslib from '../tslib.js';
-const {
-    __extends,
-    __assign,
-    __rest,
-    __decorate,
-    __param,
-    __esDecorate,
-    __runInitializers,
-    __propKey,
-    __setFunctionName,
-    __metadata,
-    __awaiter,
-    __generator,
-    __exportStar,
-    __createBinding,
-    __values,
-    __read,
-    __spread,
-    __spreadArrays,
-    __spreadArray,
-    __await,
-    __asyncGenerator,
-    __asyncDelegator,
-    __asyncValues,
-    __makeTemplateObject,
-    __importStar,
-    __importDefault,
-    __classPrivateFieldGet,
-    __classPrivateFieldSet,
-    __classPrivateFieldIn,
-    __addDisposableResource,
-    __disposeResources,
-    __rewriteRelativeImportExtension,
-} = tslib;
-export {
-    __extends,
-    __assign,
-    __rest,
-    __decorate,
-    __param,
-    __esDecorate,
-    __runInitializers,
-    __propKey,
-    __setFunctionName,
-    __metadata,
-    __awaiter,
-    __generator,
-    __exportStar,
-    __createBinding,
-    __values,
-    __read,
-    __spread,
-    __spreadArrays,
-    __spreadArray,
-    __await,
-    __asyncGenerator,
-    __asyncDelegator,
-    __asyncValues,
-    __makeTemplateObject,
-    __importStar,
-    __importDefault,
-    __classPrivateFieldGet,
-    __classPrivateFieldSet,
-    __classPrivateFieldIn,
-    __addDisposableResource,
-    __disposeResources,
-    __rewriteRelativeImportExtension,
-};
-export default tslib;
+/*!
+ * toidentifier
+ * Copyright(c) 2016 Douglas Christopher Wilson
+ * MIT Licensed
+ */
+
+'use strict'
+
+/**
+ * Module exports.
+ * @public
+ */
+
+module.exports = toIdentifier
+
+/**
+ * Trasform the given string into a JavaScript identifier
+ *
+ * @param {string} str
+ * @returns {string}
+ * @public
+ */
+
+function toIdentifier (str) {
+  return str
+    .split(' ')
+    .map(function (token) {
+      return token.slice(0, 1).toUpperCase() + token.slice(1)
+    })
+    .join('')
+    .replace(/[^ _0-9a-z]/gi, '')
+}
